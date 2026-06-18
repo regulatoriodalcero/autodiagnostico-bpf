@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<!--
+==============================================================================
+  AUTODIAGNÓSTICO REGULATÓRIO BPF/AUTOCONTROLES — DAL CERO CONSULTORIA
+  Setor: Alimentação Animal
+  Base: TF-Autocontroles + TF-BPF (Termo de Fiscalização do MAPA)
+  Versão: 1.1  |  Data: 2026-06-12
+==============================================================================
+  Como customizar:
+  - LOGO: substituir o SVG inline no header pelo <img src="logo.svg" ...>.
+  - PERGUNTAS: editar o array ITEMS (linha "DATA").
+  - POLARIDADE: subitens com invertida: true são "pegadinhas" — responder
+    "Sim" indica NÃO conformidade (score e lista de riscos invertem o valor).
+  - PESOS (O) (RR): editar a função pesoSubitem() na seção SCORE.
+  - CTA FINAL: editar nomes/telefones no #cta-final.
+  - INTEGRAÇÃO CRM: ver função submitLead() — ponto onde plugar HubSpot, RD Station etc.
+==============================================================================
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Autodiagnóstico Regulatório BPF para Alimentação Animal — Dal Cero Consultoria">
+<title>Autodiagnóstico Regulatório BPF · Dal Cero Consultoria</title>
+<style>
+  :root {
+    --azul-claro: #177fe5;
+    --azul-medio: #4399FF;
+    --azul-forte: #0043D8;
+    --azul-escuro: #003B91;
+    --navy: #041F47;
+    --dourado: #E8B461;
+    --cinza-claro: #eaeaea;
+    --cinza-medio: #d1d5db;
+    --branco: #ffffff;
+    --texto: #1f2937;
+    --texto-suave: #6b7280;
+    --verde: #10b981;
+    --amarelo: #f59e0b;
+    --laranja: #f97316;
+    --vermelho: #ef4444;
+    --marrom: #7c2d12;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--cinza-claro);
+    color: var(--texto);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  #app { min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* ---------- HEADER (preto, igual Calculadora de Risco) ---------- */
+  header {
+    background: #000;
+    color: var(--branco);
+    padding: 14px 24px;
+  }
+  .header-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .logo-area {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .logo-img {
+    height: 36px;
+    width: auto;
+    display: block;
+    flex-shrink: 0;
+  }
+  .logo-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, var(--azul-claro), var(--dourado));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    font-weight: 900;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .brand-name {
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: 1.5px;
+    color: var(--branco);
+  }
+  .breadcrumb {
+    font-size: 12px;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--branco);
+  }
+
+  /* ---------- HERO (azul, com pill, título, subtítulo e info-box) ---------- */
+  .hero {
+    background: linear-gradient(180deg, #1e40d4 0%, var(--azul-forte) 70%, var(--azul-escuro) 100%);
+    color: var(--branco);
+    padding: 56px 24px 110px;
+    text-align: center;
+    position: relative;
+    z-index: 0;
+  }
+  .hero-inner {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  .hero-pill {
+    display: inline-block;
+    padding: 8px 22px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--dourado);
+    margin-bottom: 22px;
+  }
+  .hero h1 {
+    color: var(--branco);
+    font-size: 44px;
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 16px;
+    border: none;
+  }
+  .hero-subtitle {
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 17px;
+    line-height: 1.55;
+    max-width: 640px;
+    margin: 0 auto 28px;
+  }
+  .hero-info-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: rgba(4, 31, 71, 0.45);
+    border-left: 4px solid var(--dourado);
+    padding: 16px 20px;
+    border-radius: 8px;
+    text-align: left;
+    max-width: 600px;
+    margin: 0 auto;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.95);
+    line-height: 1.5;
+  }
+  .hero-info-icon {
+    color: var(--dourado);
+    font-size: 22px;
+    line-height: 1;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  @media (max-width: 640px) {
+    .hero { padding: 40px 16px 90px; }
+    .hero h1 { font-size: 30px; }
+    .hero-subtitle { font-size: 15px; }
+  }
+
+  /* ---------- MAIN ---------- */
+  main {
+    flex: 1;
+    max-width: 880px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 28px 16px 60px;
+  }
+  .screen { display: none; animation: fadeIn 0.35s ease; }
+  .screen.active { display: block; }
+  /* Quando welcome-lead está ativa, o card "puxa" para cima sobrepondo o hero */
+  #screen-welcome-lead.active { margin-top: -75px; position: relative; z-index: 5; }
+  #screen-welcome-lead .form-card {
+    box-shadow: 0 8px 28px rgba(4, 31, 71, 0.18);
+    padding: 32px;
+    background: var(--branco);
+    position: relative;
+    z-index: 5;
+  }
+  @media (max-width: 640px) {
+    #screen-welcome-lead.active { margin-top: -60px; }
+    #screen-welcome-lead .form-card { padding: 22px; }
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .card {
+    background: var(--branco);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 20px rgba(4, 31, 71, 0.06);
+  }
+  h1 { color: var(--azul-escuro); font-size: 24px; margin-bottom: 10px; line-height: 1.25; }
+  h2 { color: var(--azul-escuro); font-size: 20px; margin-bottom: 12px; line-height: 1.3; }
+  h3 { color: var(--navy); font-size: 16px; margin-bottom: 8px; }
+  p { color: var(--texto); margin-bottom: 12px; }
+  .lead { font-size: 16px; color: var(--texto); margin-bottom: 18px; }
+  .muted { color: var(--texto-suave); font-size: 13px; }
+  .note { font-size: 12px; color: var(--texto-suave); margin-top: 4px; }
+
+  /* ---------- BUTTONS ---------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: none;
+    padding: 13px 24px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    font-family: inherit;
+    text-decoration: none;
+    min-height: 44px;
+  }
+  .btn-primary {
+    background: var(--azul-forte);
+    color: var(--branco);
+  }
+  .btn-primary:hover { background: var(--azul-escuro); transform: translateY(-1px); }
+  .btn-primary:disabled { background: var(--cinza-medio); color: var(--texto-suave); cursor: not-allowed; transform: none; }
+  .btn-secondary {
+    background: var(--branco);
+    color: var(--azul-forte);
+    border: 1.5px solid var(--azul-forte);
+  }
+  .btn-secondary:hover { background: #eef4ff; }
+  .btn-ghost {
+    background: transparent;
+    color: var(--azul-forte);
+    padding: 10px 16px;
+  }
+  .btn-ghost:hover { background: var(--cinza-claro); }
+  .btn-gold {
+    background: var(--dourado);
+    color: var(--navy);
+  }
+  .btn-gold:hover { background: #d4a050; }
+
+  /* ---------- WELCOME ---------- */
+  .feature-list { list-style: none; margin: 18px 0 24px; }
+  .feature-list li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--cinza-claro); }
+  .feature-list li:last-child { border: none; }
+  .feature-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--azul-claro);
+    color: var(--branco);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+    font-size: 13px;
+  }
+  .feature-text strong { display: block; color: var(--navy); margin-bottom: 2px; font-size: 14px; }
+  .feature-text span { color: var(--texto-suave); font-size: 13px; }
+  .start-actions { display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap; }
+
+  /* ---------- LEAD CAPTURE ---------- */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  .form-grid .full { grid-column: 1 / -1; }
+  .form-field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 6px;
+  }
+  .required { color: var(--vermelho); }
+  .form-field input, .form-field select {
+    width: 100%;
+    padding: 11px 13px;
+    border: 1.5px solid var(--cinza-medio);
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: inherit;
+    transition: border-color 0.15s ease;
+    background: var(--branco);
+  }
+  .form-field input:focus, .form-field select:focus {
+    outline: none;
+    border-color: var(--azul-claro);
+    box-shadow: 0 0 0 3px rgba(23, 127, 229, 0.15);
+  }
+  .check-group { display: flex; flex-direction: column; gap: 8px; }
+  .check-group label {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    border: 1.5px solid var(--cinza-medio);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--texto);
+    font-weight: 500;
+    transition: all 0.15s ease;
+  }
+  .check-group label:hover { border-color: var(--azul-claro); background: #f8fbff; }
+  .check-group input { accent-color: var(--azul-forte); width: 18px; height: 18px; }
+  .lgpd-box {
+    background: var(--cinza-claro);
+    padding: 14px;
+    border-radius: 8px;
+    margin: 14px 0;
+    font-size: 12px;
+    color: var(--texto-suave);
+  }
+  .lgpd-box label {
+    display: flex; align-items: flex-start; gap: 10px;
+    cursor: pointer;
+    color: var(--texto);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .lgpd-box input { margin-top: 3px; flex-shrink: 0; }
+  .form-actions { margin-top: 22px; display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+
+  /* ---------- QUIZ ---------- */
+  .progress-bar { height: 6px; background: var(--cinza-claro); border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--azul-claro), var(--azul-forte)); transition: width 0.3s ease; }
+  .progress-text { font-size: 12px; color: var(--texto-suave); margin-bottom: 18px; display: flex; justify-content: space-between; }
+  .section-pill {
+    display: inline-block;
+    background: var(--azul-claro);
+    color: var(--branco);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+  .item-title { color: var(--navy); font-size: 18px; font-weight: 700; margin-bottom: 6px; line-height: 1.3; }
+  .item-note { font-size: 12px; color: var(--texto-suave); margin-bottom: 16px; padding: 6px 10px; background: var(--cinza-claro); border-radius: 4px; border-left: 3px solid var(--azul-claro); }
+
+  .sub-block { padding: 14px 0; border-top: 1px solid var(--cinza-claro); }
+  .sub-block:first-of-type { border-top: none; padding-top: 4px; }
+  .sub-label {
+    display: inline-block;
+    background: #e0eaff;
+    color: var(--azul-escuro);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .sub-tag-text { color: var(--texto-suave); font-size: 11px; font-style: italic; margin-left: 6px; }
+  .sub-pergunta { font-size: 15px; color: var(--navy); font-weight: 500; margin-bottom: 8px; line-height: 1.45; }
+  .sub-exemplo {
+    font-size: 12px;
+    color: var(--texto);
+    padding: 8px 10px;
+    background: #fffbf0;
+    border-left: 3px solid var(--dourado);
+    border-radius: 4px;
+    margin-bottom: 12px;
+  }
+  .sub-exemplo b { color: var(--marrom); font-weight: 600; }
+
+  .answers { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .answer-option {
+    border: 1.5px solid var(--cinza-medio);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: var(--branco);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--texto);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+  }
+  .answer-option:hover { border-color: var(--azul-medio); background: #f8fbff; }
+  /* Cor única para qualquer resposta selecionada — não pode sinalizar qual opção
+     é a "conforme", já que há perguntas de polaridade invertida (pegadinhas) */
+  .answer-option.selected { background: var(--azul-forte); color: var(--branco); border-color: var(--azul-forte); }
+
+  .answer-legend {
+    margin-top: 16px;
+    padding: 10px 12px;
+    background: var(--cinza-claro);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--texto-suave);
+    line-height: 1.4;
+  }
+  .answer-legend b { color: var(--navy); }
+
+  .quiz-actions { display: flex; justify-content: space-between; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+  .quiz-actions .btn-ghost { visibility: hidden; }
+  .quiz-actions .btn-ghost.show { visibility: visible; }
+
+  /* ---------- FILTER MID-QUIZ ---------- */
+  .filter-card { text-align: center; }
+  .filter-card .filter-icon { font-size: 36px; color: var(--azul-claro); margin-bottom: 10px; }
+  .filter-options { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+  .filter-options .answer-option { padding: 14px; font-size: 15px; }
+  .check-cc {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px;
+    border: 1.5px solid var(--cinza-medio);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+  }
+  .check-cc:hover { border-color: var(--azul-claro); background: #f8fbff; }
+  .check-cc input { margin-top: 3px; accent-color: var(--azul-forte); width: 18px; height: 18px; flex-shrink: 0; }
+  .check-cc b { color: var(--navy); font-size: 14px; }
+
+  /* ---------- RESULTS ---------- */
+  .score-hero {
+    text-align: center;
+    padding: 26px 16px;
+    background: linear-gradient(135deg, var(--navy), var(--azul-forte));
+    border-radius: 12px;
+    color: var(--branco);
+    margin-bottom: 22px;
+  }
+  .score-number { font-size: 56px; font-weight: 900; line-height: 1; margin-bottom: 6px; }
+  .score-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.85; }
+  .maturity-badge {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 7px 18px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .maturity-badge.baixo { background: var(--verde); color: var(--branco); }
+  .maturity-badge.medio { background: var(--amarelo); color: var(--navy); }
+  .maturity-badge.alto { background: var(--laranja); color: var(--branco); }
+  .maturity-badge.altissimo { background: var(--vermelho); color: var(--branco); }
+
+  .section-results { margin-top: 24px; }
+  .section-results h3 { margin-bottom: 12px; }
+  .section-row { display: grid; grid-template-columns: 1fr 50px; gap: 14px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--cinza-claro); }
+  .section-row:last-child { border: none; }
+  .section-name { font-size: 13px; color: var(--navy); font-weight: 600; margin-bottom: 4px; }
+  .bar-container { height: 8px; background: var(--cinza-claro); border-radius: 4px; overflow: hidden; }
+  .bar { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+  .bar.high { background: var(--verde); }
+  .bar.mid { background: var(--amarelo); }
+  .bar.low { background: var(--laranja); }
+  .bar.vlow { background: var(--vermelho); }
+  .section-pct { text-align: right; font-weight: 700; color: var(--navy); font-size: 16px; }
+
+  .risks-section {
+    margin-top: 26px;
+    padding: 18px;
+    background: #fff7ed;
+    border-left: 4px solid var(--dourado);
+    border-radius: 8px;
+  }
+  .risks-section h3 { color: var(--navy); margin-bottom: 8px; }
+  .risks-section .sub { font-size: 12px; color: var(--texto-suave); margin-bottom: 12px; }
+  .risk-item {
+    background: var(--branco);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    border-left: 3px solid var(--vermelho);
+  }
+  .risk-item.partial { border-left-color: var(--amarelo); }
+  .risk-item .risk-badges { font-size: 10px; font-weight: 700; margin-bottom: 4px; }
+  .risk-item .badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-weight: 700; margin-right: 4px; letter-spacing: 0.3px; }
+  .risk-item .badge-o { background: var(--marrom); color: var(--branco); }
+  .risk-item .badge-rr { background: var(--dourado); color: var(--navy); }
+  .risk-item .badge-status { background: var(--vermelho); color: var(--branco); }
+  .risk-item .badge-status.partial { background: var(--amarelo); color: var(--navy); }
+  .risk-item .risk-text { color: var(--texto); line-height: 1.4; }
+
+  #cta-final {
+    margin-top: 28px;
+    padding: 24px;
+    background: var(--navy);
+    color: var(--branco);
+    border-radius: 12px;
+    text-align: center;
+  }
+  #cta-final h3 { color: var(--branco); margin-bottom: 6px; font-size: 18px; }
+  #cta-final p { color: rgba(255,255,255,0.85); margin-bottom: 18px; font-size: 13px; }
+  .cta-contacts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+  .cta-contact {
+    background: rgba(255,255,255,0.1);
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--branco);
+  }
+  .cta-contact b { display: block; color: var(--dourado); font-size: 11px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .cta-contact a { color: var(--branco); text-decoration: none; font-weight: 600; }
+  .cta-contact a:hover { color: var(--dourado); }
+  /* Quadro do Time Comercial ocupa a linha inteira e mostra os dois números lado a lado */
+  .cta-contact-wide { grid-column: 1 / -1; }
+  .cta-contact-wide a { display: inline-block; margin-right: 20px; }
+  .cta-email { margin-top: 10px; font-size: 12px; }
+  .cta-email a { color: var(--dourado); text-decoration: none; }
+
+  .result-actions { margin-top: 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  footer {
+    text-align: center;
+    padding: 24px 16px;
+    color: var(--texto-suave);
+    font-size: 12px;
+    background: var(--branco);
+    border-top: 1px solid var(--cinza-claro);
+  }
+  footer a { color: var(--azul-forte); text-decoration: none; }
+  footer .footer-addr { margin-top: 6px; }
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width: 640px) {
+    main { padding: 18px 12px; }
+    .card { padding: 18px; }
+    h1 { font-size: 20px; }
+    h2 { font-size: 17px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .score-number { font-size: 44px; }
+    .answers { grid-template-columns: 1fr 1fr; }
+    .quiz-actions .btn { flex: 1; min-width: 140px; }
+    .form-actions .btn { width: 100%; }
+    .start-actions .btn { width: 100%; }
+    .cta-contacts { grid-template-columns: 1fr; }
+    .breadcrumb { display: none; }
+  }
+
+  /* ---------- PRINT ---------- */
+  @media print {
+    body { background: var(--branco); }
+    header, footer, .result-actions, #cta-final { display: none !important; }
+    .card { box-shadow: none; padding: 0; }
+    .screen { display: block !important; }
+    #screen-welcome, #screen-lead, #screen-quiz, .filter-screen { display: none !important; }
+    main { max-width: 100%; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="header-inner">
+      <div class="logo-area">
+        <img src="data:image/png;base64,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" alt="Dal Cero Consultoria" class="logo-img" onerror="this.outerHTML='<div class=&quot;logo-mark&quot;>DC</div>';">
+        <span class="brand-name">DAL CERO CONSULTORIA</span>
+      </div>
+      <div class="breadcrumb">REGULATÓRIO · MAPA</div>
+    </div>
+  </header>
+
+  <!-- ========= HERO (visível só na tela welcome-lead) ========= -->
+  <section class="hero" id="hero">
+    <div class="hero-inner">
+      <div class="hero-pill">Alimentação Animal · BPF e Autocontroles</div>
+      <h1>Autodiagnóstico Regulatório</h1>
+      <p class="hero-subtitle">
+        Um diagnóstico estruturado para você avaliar a maturidade da sua operação em Boas Práticas de Fabricação
+        e Autocontroles, identificar pontos de atenção e priorizar os próximos passos.
+      </p>
+      <div class="hero-info-box">
+        <span class="hero-info-icon">🛡</span>
+        <span>Esta é uma autoavaliação indicativa. O cálculo oficial do Risco Regulatório é realizado pelo serviço de inspeção competente.</span>
+      </div>
+    </div>
+  </section>
+
+  <main>
+
+    <!-- ========= TELA 1: WELCOME + LEAD (combinados) ========= -->
+    <section id="screen-welcome-lead" class="screen active">
+      <div class="card form-card">
+        <h2>Acesse o autodiagnóstico gratuito</h2>
+        <p class="muted">Preencha seus dados abaixo para acessar a ferramenta. As suas informações nos ajudam a personalizar o atendimento.</p>
+
+        <form id="lead-form" onsubmit="submitLead(event)">
+          <div class="form-grid">
+            <div class="form-field full">
+              <label>Nome completo <span class="required">*</span></label>
+              <input type="text" name="nome" required autocomplete="name">
+            </div>
+            <div class="form-field">
+              <label>Empresa <span class="required">*</span></label>
+              <input type="text" name="empresa" required autocomplete="organization">
+            </div>
+            <div class="form-field">
+              <label>Registro MAPA <span class="muted" style="font-weight:400;">(opcional)</span></label>
+              <input type="text" name="registro" placeholder="Ex.: SP-XX/XXXX">
+            </div>
+            <div class="form-field full">
+              <label>E-mail corporativo <span class="required">*</span></label>
+              <input type="email" name="email" required autocomplete="email">
+            </div>
+            <div class="form-field full">
+              <label>A empresa fabrica produtos com medicamentos? <span class="required">*</span></label>
+              <select name="medicamento" required>
+                <option value="">Selecione...</option>
+                <option value="sim">Sim, fabricamos produtos medicamentosos</option>
+                <option value="nao">Não, fabricamos apenas produtos não medicamentosos</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="lgpd-box">
+            <label>
+              <input type="checkbox" name="lgpd" required>
+              <span>
+                <b>Autorizo</b>, conforme a LGPD (Lei 13.709/2018), o tratamento dos meus dados pessoais e das informações da minha empresa pela
+                <b>Dal Cero Consultoria</b>, com a finalidade de envio do relatório de autodiagnóstico e eventual contato comercial sobre serviços de
+                consultoria regulatória. Posso solicitar a exclusão a qualquer momento pelo e-mail <i>comercial@dalceroconsultoria.com.br</i>.
+              </span>
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Acessar autodiagnóstico →</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ========= TELA 3: QUIZ ========= -->
+    <section id="screen-quiz" class="screen">
+      <div class="card">
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width: 0%"></div></div>
+        <div class="progress-text">
+          <span id="progress-label">—</span>
+          <span id="progress-percent">0%</span>
+        </div>
+        <div id="section-pill" class="section-pill">—</div>
+        <div id="item-title" class="item-title">—</div>
+        <div id="item-note" class="item-note" style="display: none;"></div>
+
+        <div id="subs-container"></div>
+
+        <div class="answer-legend">
+          <span><b>Parcialmente</b> — existe, mas de forma incompleta, sem registro ou nem sempre cumprido.</span>
+          <span><b>Não se aplica</b> — o item não faz parte da realidade da sua fábrica (não entra no cálculo).</span>
+        </div>
+
+        <div class="quiz-actions">
+          <button class="btn btn-ghost" onclick="prevItem()" id="btn-prev">← Anterior</button>
+          <button class="btn btn-primary" onclick="nextItem()" id="btn-next" disabled>Próximo →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========= TELA 4: FILTRO PRAGAS ========= -->
+    <section id="screen-filter-pragas" class="screen filter-screen">
+      <div class="card filter-card">
+        <div class="filter-icon">🔍</div>
+        <h2>Sobre o controle de pragas</h2>
+        <p class="muted">Antes de prosseguir, precisamos saber:</p>
+        <h3 style="margin-top: 16px; color: var(--navy);">O controle de pragas da fábrica é próprio ou terceirizado?</h3>
+        <div class="filter-options">
+          <button class="answer-option" onclick="setFilterPragas('proprio')">Próprio (executado por funcionários da empresa)</button>
+          <button class="answer-option" onclick="setFilterPragas('terceirizado')">Terceirizado (contratado de empresa especializada)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========= TELA 4b: FILTRO CONTAMINAÇÃO CRUZADA ========= -->
+    <section id="screen-filter-cc" class="screen filter-screen">
+      <div class="card filter-card">
+        <div class="filter-icon">🛡️</div>
+        <h2>Sobre prevenção de contaminação cruzada</h2>
+        <p class="muted">Antes de prosseguir, precisamos saber:</p>
+        <h3 style="margin-top: 16px; color: var(--navy);">Quais medidas preventivas a fábrica usa contra contaminação cruzada entre lotes?</h3>
+        <p class="muted" style="font-size: 12px; margin-top: -6px;">Marque todas as que se aplicam à sua operação.</p>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin: 16px 0;">
+          <label class="check-cc">
+            <input type="checkbox" id="cc-seq">
+            <div>
+              <b>Sequenciamento de produção</b>
+              <div style="font-size: 12px; color: var(--texto-suave); margin-top: 2px;">Definição de ordem por tipo de produto, espécie-alvo, presença de medicamento ou alergênico</div>
+            </div>
+          </label>
+          <label class="check-cc">
+            <input type="checkbox" id="cc-flush">
+            <div>
+              <b>Flushing / Limpeza de linha</b>
+              <div style="font-size: 12px; color: var(--texto-suave); margin-top: 2px;">Passagem de material neutro entre lotes para "limpar" resíduos da linha</div>
+            </div>
+          </label>
+        </div>
+        <p class="muted" style="font-size: 12px;">
+          Se a fábrica não usa nenhuma dessas medidas, deixe ambas desmarcadas e clique em "Continuar". As perguntas correspondentes serão puladas.
+        </p>
+        <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+          <button class="btn btn-primary" onclick="confirmFilterCC()">Continuar →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========= TELA 4c: FILTRO ÁGUA ========= -->
+    <section id="screen-filter-agua" class="screen filter-screen">
+      <div class="card filter-card">
+        <div class="filter-icon">💧</div>
+        <h2>Sobre a água da fábrica</h2>
+        <p class="muted">Antes de prosseguir, precisamos saber:</p>
+        <h3 style="margin-top: 16px; color: var(--navy);">Quais situações abaixo se aplicam à água da sua fábrica?</h3>
+        <p class="muted" style="font-size: 12px; margin-top: -6px;">Marque todas as que se aplicam à sua operação.</p>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin: 16px 0;">
+          <label class="check-cc">
+            <input type="checkbox" id="ag-reservatorio">
+            <div>
+              <b>Possui reservatórios de água</b>
+              <div style="font-size: 12px; color: var(--texto-suave); margin-top: 2px;">Caixa d'água, cisterna, tanque ou similar que armazena água na fábrica</div>
+            </div>
+          </label>
+          <label class="check-cc">
+            <input type="checkbox" id="ag-ingrediente">
+            <div>
+              <b>Usa água como ingrediente, vapor ou gelo</b>
+              <div style="font-size: 12px; color: var(--texto-suave); margin-top: 2px;">A água entra na formulação do produto ou tem contato direto com ele</div>
+            </div>
+          </label>
+          <label class="check-cc">
+            <input type="checkbox" id="ag-rede">
+            <div>
+              <b>A água vem de rede de abastecimento</b>
+              <div style="font-size: 12px; color: var(--texto-suave); margin-top: 2px;">Pública ou privada (Corsan, Casan, Sabesp, Sanepar etc.). Deixe desmarcado se for poço, fonte ou captação própria</div>
+            </div>
+          </label>
+        </div>
+        <p class="muted" style="font-size: 12px;">
+          Conforme o que você marcar, algumas perguntas de água serão exibidas ou puladas.
+        </p>
+        <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+          <button class="btn btn-primary" onclick="confirmFilterAgua()">Continuar →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========= TELA 4d: GATE — RESPONDER MÓDULO DE MEDICAMENTOS? ========= -->
+    <section id="screen-gate-meds" class="screen filter-screen">
+      <div class="card filter-card">
+        <div class="filter-icon">💊</div>
+        <h2>Módulo de Medicamentos</h2>
+        <p class="muted">Você concluiu a parte de Boas Práticas e Autocontroles.</p>
+        <h3 style="margin-top: 16px; color: var(--navy);">Deseja responder também o módulo específico de medicamentos?</h3>
+        <p class="muted" style="font-size: 12px;">São perguntas voltadas a quem fabrica produtos medicamentosos. Se preferir, você pode finalizar agora e ver o seu resultado.</p>
+        <div class="filter-options" style="margin-top: 16px;">
+          <button class="answer-option" onclick="gateMedResponder()" style="flex-direction: column; align-items: flex-start; text-align: left; padding: 14px;">
+            <b>Responder o módulo de Medicamentos →</b>
+            <span style="font-weight: 400; font-size: 12px; color: var(--texto-suave); margin-top: 2px;">Continua o autodiagnóstico com as perguntas específicas de medicamentos</span>
+          </button>
+          <button class="answer-option" onclick="gateMedFinalizar()" style="flex-direction: column; align-items: flex-start; text-align: left; padding: 14px;">
+            <b>Finalizar e ver meu resultado</b>
+            <span style="font-weight: 400; font-size: 12px; color: var(--texto-suave); margin-top: 2px;">Encerra o autodiagnóstico sem o módulo de medicamentos</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========= TELA 4e: FILTRO CATEGORIA DE MEDICAMENTOSO ========= -->
+    <section id="screen-filter-medcategoria" class="screen filter-screen">
+      <div class="card filter-card">
+        <div class="filter-icon">💊</div>
+        <h2>Categoria do estabelecimento</h2>
+        <p class="muted">Antes de prosseguir, precisamos saber:</p>
+        <h3 style="margin-top: 16px; color: var(--navy);">Em qual(is) categoria(s) o estabelecimento se enquadra?</h3>
+        <p class="muted" style="font-size: 12px; margin-top: -6px;">Marque todas as que se aplicam.</p>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin: 16px 0;">
+          <label class="check-cc">
+            <input type="checkbox" id="mc-produtor-rural">
+            <div>
+              <b>Produtor rural</b>
+              <div style="font-size: 12px; color: var(--texto-suave); margin-top: 2px;">Fabrica produto de pronto uso medicamentoso na própria propriedade rural</div>
+            </div>
+          </label>
+          <label class="check-cc">
+            <input type="checkbox" id="mc-pronto-uso">
+            <div>
+              <b>Fabricante de produto de pronto uso</b>
+              <div style="font-size: 12px; color: var(--texto-suave); margin-top: 2px;">Produto final medicamentoso, fornecido ao proprietário dos animais</div>
+            </div>
+          </label>
+          <label class="check-cc">
+            <input type="checkbox" id="mc-intermediario">
+            <div>
+              <b>Fabricante de produto intermediário</b>
+              <div style="font-size: 12px; color: var(--texto-suave); margin-top: 2px;">Fornecido a outro estabelecimento autorizado, que o incorpora ao produto final</div>
+            </div>
+          </label>
+        </div>
+        <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+          <button class="btn btn-primary" onclick="confirmFilterMedCategoria()">Continuar →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========= TELA 5: RESULTS ========= -->
+    <section id="screen-results" class="screen">
+      <div class="card">
+        <h2>Resultado do seu autodiagnóstico</h2>
+        <p class="muted" id="results-greeting">—</p>
+
+        <div class="score-hero">
+          <div class="score-label">Score de Conformidade BPF/Autocontroles</div>
+          <div class="score-number" id="score-number">0</div>
+          <div class="maturity-badge" id="maturity-badge">—</div>
+        </div>
+
+        <div class="section-results">
+          <h3>Desempenho por área</h3>
+          <div id="section-results-list"></div>
+        </div>
+
+        <div class="risks-section" id="risks-section">
+          <h3>Riscos regulatórios identificados</h3>
+          <div class="sub">Pontos da sua operação onde foram identificados itens obrigatórios (O) ou de Risco Regulatório (RR) não conformes ou parcialmente conformes.</div>
+          <div id="risks-list"></div>
+        </div>
+
+        <div id="cta-final">
+          <h3>Identificou pontos de atenção? Nós temos a solução.</h3>
+          <p>
+            A <b>Dal Cero Consultoria</b> é especialista em regulatório MAPA para o setor de alimentação animal —
+            diagnóstico, adequação de BPF, registros no SipeAgro, suporte em fiscalizações e gestão regulatória contínua.
+            Fale com nosso comercial e construa um plano personalizado.
+          </p>
+          <div class="cta-contacts">
+            <div class="cta-contact cta-contact-wide">
+              <b>Time Comercial</b>
+              <a href="https://wa.me/5549999710329" target="_blank">(49) 99971-0329</a>
+              <a href="https://wa.me/5549991993297" target="_blank">(49) 99199-3297</a>
+            </div>
+            <div class="cta-contact">
+              <b>E-mail Comercial</b>
+              <a href="mailto:comercial@dalceroconsultoria.com.br">comercial@dalceroconsultoria.com.br</a>
+            </div>
+            <div class="cta-contact">
+              <b>Site</b>
+              <a href="https://dalceroacademy.com" target="_blank">dalceroacademy.com</a>
+            </div>
+            <div class="cta-contact">
+              <b>LinkedIn</b>
+              <a href="https://www.linkedin.com/company/grupo-dal-cero/" target="_blank">/grupo-dal-cero</a>
+            </div>
+            <div class="cta-contact">
+              <b>Instagram</b>
+              <a href="https://www.instagram.com/grupodalcero/" target="_blank">@grupodalcero</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="result-actions">
+          <button class="btn btn-secondary" onclick="window.print()">Imprimir / Salvar PDF</button>
+          <button class="btn btn-ghost" onclick="restart()">Refazer autodiagnóstico</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div><b>Dal Cero Consultoria</b> · Regulatório MAPA · Alimentação Animal</div>
+    <div class="footer-addr">Rua Prefeito Albino Cerutti Cella, 322, Sala 06 · Centro · Maravilha — SC · <a href="mailto:comercial@dalceroconsultoria.com.br">comercial@dalceroconsultoria.com.br</a></div>
+    <div style="margin-top: 8px;">© 2026 Dal Cero Consultoria · Baseado no Termo de Fiscalização do MAPA (TF-BPF/Autocontroles) · <a href="https://wikisda.agricultura.gov.br/pt-br/Inspe%C3%A7%C3%A3o-Animal/Alimenta%C3%A7%C3%A3o-Animal/Manual-para-o-preenchimento-do-termo-de-fiscaliza%C3%A7%C3%A3o-BPF" target="_blank">Ver manual</a></div>
+  </footer>
+</div>
+
+<script>
+/* ==============================================================================
+   DATA — Seções do Termo de Fiscalização
+   ============================================================================== */
+const SECTIONS = {
+  'A':   { nome: 'Documentação e Registro' },
+  'B':   { nome: 'Condições Gerais da Área Externa' },
+  'C':   { nome: 'Condições Gerais da Área Interna' },
+  'D':   { nome: 'Treinamentos' },
+  'E':   { nome: 'Controle do Processo Produtivo' },
+  'F':   { nome: 'Avaliação dos Elementos de Controle' },
+  'F.1': { nome: 'Qualificação de Fornecedores' },
+  'F.2': { nome: 'Limpeza/Higienização' },
+  'F.3': { nome: 'Higiene e Saúde do Pessoal' },
+  'F.4': { nome: 'Potabilidade da Água' },
+  'F.5': { nome: 'Prevenção de Contaminação Cruzada' },
+  'F.6': { nome: 'Manutenção e Calibração' },
+  'F.7': { nome: 'Controle Integrado de Pragas' },
+  'F.8': { nome: 'Resíduos e Efluentes' },
+  'F.9': { nome: 'Rastreabilidade e Recolhimento' },
+  'G':   { nome: 'Medicamentos — Autorização' },
+  'G.1': { nome: 'Medicamentos — Controle de Produção' },
+  'G.2': { nome: 'Medicamentos — Produto de Pronto Uso' },
+  'G.3': { nome: 'Medicamentos — Produto Intermediário' }
+};
+
+/* ==============================================================================
+   DATA — Itens e sub-perguntas (v6 — revisão Renata 2026-06-15)
+   Estrutura por item:
+     id            — número do item conforme TF MAPA
+     secao         — id da seção
+     condicional   — filtro de ITEM: 'medicamento' | 'sequenciamento' | 'flushing'
+     subs[]        — sub-perguntas (uma ou mais)
+       { id, label, pergunta, exemplo, obrigatorio, rr, condicional, invertida }
+       condicional de SUB: 'medicamento' | 'pragas-terceirizado'
+                           'agua-rede' | 'agua-nao-rede' | 'agua-ingrediente' | 'agua-reservatorio'
+     invertida: true → pergunta "pegadinha": responder "Sim" = NÃO conformidade
+     exemplo é opcional (dica "Considere:"); quando ausente, não é exibido.
+   ============================================================================== */
+const ITEMS = [
+  // ========== A. DOCUMENTAÇÃO E REGISTRO ==========
+  { id: 1, secao: 'A', subs: [
+    { id: '1', invertida: true, pergunta: 'A empresa fabrica hoje algum produto — mesmo eventual ou "por encomenda" — fora das categorias autorizadas no registro do SipeAgro?',
+      exemplo: 'pense em produções pontuais: aditivos, premixes ou rações feitas em paralelo ao escopo principal.' }
+  ]},
+  { id: 2, secao: 'A', subs: [
+    { id: '2', pergunta: 'No último mês, o RT participou de alguma decisão técnica da fábrica (aprovação de fórmula, tratamento de desvio, qualificação de fornecedor)?',
+      exemplo: 'pense na rotina real: quem revisa formulações, POPs e planos de ação no dia a dia.' }
+  ]},
+  { id: 3, secao: 'A', subs: [
+    { id: '3', rr: true, pergunta: 'As não conformidades apontadas em fiscalizações anteriores foram resolvidas dentro do prazo informado ao fiscal?',
+      exemplo: 'a evidência precisa ser localizável em minutos, não "estar em algum lugar".' }
+  ]},
+  { id: 4, secao: 'A', subs: [
+    { id: '4a', label: 'envio', pergunta: 'Os dados mensais de produção e comercialização foram enviados ao sistema oficial dentro do prazo (10º dia útil) em todos os últimos 12 meses?',
+      exemplo: 'um único mês atrasado ou omitido já conta.' },
+    { id: '4b', label: 'consistência', invertida: true, pergunta: 'Já houve divergência entre o que foi informado ao sistema oficial e as notas fiscais ou registros internos?',
+      exemplo: 'considere os últimos 6 meses, incluindo ajustes feitos "depois".' }
+  ]},
+  { id: 5, secao: 'A', subs: [
+    { id: '5a', obrigatorio: true, rr: true, invertida: true, pergunta: 'Na falta de um ingrediente, os colaboradores costumam substituí-lo por outro que não está listado como substituto eventual no rótulo?',
+      exemplo: 'vale para qualquer troca, mesmo temporária ou "tecnicamente equivalente".' },
+    { id: '5b', obrigatorio: true, rr: true, invertida: true, pergunta: 'São produzidas fórmulas de última hora sem aprovação do RT quando surge alguma necessidade?',
+      exemplo: 'pense nos pedidos urgentes que entram fora do planejamento.' },
+    { id: '5c', obrigatorio: true, rr: true, pergunta: 'Quando a empresa usa premix ou núcleo, as informações do fornecedor são reproduzidas no rótulo do produto acabado?',
+      exemplo: 'a composição declarada pelo fornecedor do premix aparece no rótulo final.' }
+  ]},
+  { id: 6, secao: 'A', subs: [
+    { id: '6a', rr: true, pergunta: 'Todos os produtos possuem croqui de rótulo aprovado e assinado pelo RT?',
+      exemplo: 'inclua os produtos de menor giro e os sazonais.' },
+    { id: '6b', label: 'embalagens', rr: true, invertida: true, pergunta: 'Algum produto é envasado em embalagem reaproveitada ou de outro fabricante?',
+      exemplo: 'inclua big bags e embalagens "neutras" sem identificação do estabelecimento.' }
+  ]},
+  { id: 7, secao: 'A', subs: [
+    { id: '7', invertida: true, pergunta: 'Alguma obra, ampliação ou troca de equipamento recente foi executada antes da atualização e aprovação no SipeAgro?',
+      exemplo: 'considere reformas, ampliações e novos equipamentos dos últimos 5 anos.' }
+  ]},
+  { id: 8, secao: 'A', subs: [
+    { id: '8', pergunta: 'O cadastro no SIPEAGRO reflete 100% a realidade atual da empresa (endereço, RT, sócios, classes de produtos, capacidade)?',
+      exemplo: 'qualquer mudança dos últimos 12 meses já comunicada, com confirmação arquivada.' }
+  ]},
+
+  // ========== B. ÁREA EXTERNA ==========
+  { id: 9, secao: 'B', subs: [
+    { id: '9a', label: 'vias e drenagem', invertida: true, pergunta: 'As vias e o pátio acumulam poças, lama ou buracos depois das chuvas?',
+      exemplo: 'lembre de como fica o pátio na semana mais chuvosa do ano.' },
+    { id: '9b', label: 'vegetação', pergunta: 'A vegetação ao redor da fábrica está aparada, sem mato alto encostando nas edificações?',
+      exemplo: 'considere também os fundos e as laterais pouco visitadas.' },
+    { id: '9c', label: 'limpeza geral', invertida: true, pergunta: 'Há entulho, paletes velhos ou materiais sem uso acumulados no perímetro externo?',
+      exemplo: 'inclua o "cantinho" atrás do galpão.' },
+    { id: '9d', label: 'focos de pragas', pergunta: 'O perímetro está livre de ninhos de aves, vestígios de roedores e construções abandonadas próximas?',
+      exemplo: 'olhe beirais, forros e áreas contíguas ao terreno.' },
+    { id: '9e', invertida: true, pergunta: 'A empresa permite que animais domésticos circulem pelo pátio?',
+      exemplo: 'cães e gatos "da fábrica" também contam.' },
+    { id: '9f', pergunta: 'Todo o perímetro do terreno possui cerca ou muro?',
+      exemplo: 'sem trechos abertos por onde entrem animais ou pessoas.' }
+  ]},
+
+  // ========== C. ÁREA INTERNA ==========
+  { id: 10, secao: 'C', subs: [
+    { id: '10a', label: 'fluxo', invertida: true, pergunta: 'Em algum trecho da fábrica, matéria-prima e produto acabado cruzam o mesmo caminho?',
+      exemplo: 'siga mentalmente o trajeto do recebimento até a expedição.' },
+    { id: '10b', label: 'estruturas', invertida: true, pergunta: 'Pisos, paredes e tetos apresentam rachaduras, buracos ou quebras que acumulam resíduos ou dificultam a limpeza?',
+      exemplo: 'rachaduras, mofo e infiltrações contam, mesmo as pequenas.' },
+    { id: '10c', label: 'sanitários', invertida: true, pergunta: 'Algum sanitário ou vestiário se comunica diretamente com a área de produção?',
+      exemplo: 'porta que abre para a linha conta, mesmo que "fique sempre fechada".' },
+    { id: '10d', label: 'pesagem medicamentos', condicional: 'medicamento', pergunta: 'A sala de pesagem de medicamentos tem exaustão funcionando, com manutenção registrada?',
+      exemplo: 'exaustão instalada mas desligada não conta.' }
+  ]},
+  { id: 11, secao: 'C', subs: [
+    { id: '11a', label: 'dimensionamento', invertida: true, pergunta: 'Nos picos de produção, corredores ou áreas de passagem acabam servindo de armazenagem temporária?',
+      exemplo: 'paletes encostados na parede "só por uns dias" também contam.' },
+    { id: '11b', label: 'materiais', pergunta: 'Silos, tulhas e caixas em uso são todos de material adequado, sem nenhuma estrutura de madeira em contato com o produto?',
+      exemplo: 'vasculhe mentalmente todas as linhas, inclusive caixas "provisórias".' },
+    { id: '11c', label: 'moegas: proteção', pergunta: 'As moegas permanecem fechadas quando não há descarregamento?',
+      exemplo: 'tampa ou grade que fica realmente fechada fora do uso.' },
+    { id: '11d', label: 'moegas: uso', invertida: true, pergunta: 'A moega segura matéria-prima por algumas horas quando os silos estão cheios?',
+      exemplo: 'pense no que acontece na prática nos dias de safra.' },
+    { id: '11e', invertida: true, pergunta: 'Nos últimos meses, foi preciso armazenar matéria-prima ou produto acabado fora da área destinada (pátio, sob lona, na moega) por falta de espaço?',
+      exemplo: 'mesmo "só nesta safra" conta.' },
+    { id: '11f', label: 'produtos segregados', pergunta: 'Existe área identificada e de acesso controlado para produtos vencidos, rejeitados ou recolhidos?',
+      exemplo: 'placa visível, inventário próprio e acesso restrito.' }
+  ]},
+  { id: 12, secao: 'C', subs: [
+    { id: '12a', invertida: true, pergunta: 'A produção para com frequência por gargalo de equipamento (capacidade insuficiente para o volume atual)?',
+      exemplo: 'pense nos dias de pico: algum equipamento vira gargalo?' },
+    { id: '12b', invertida: true, pergunta: 'Alguma etapa utiliza equipamento improvisado ou adaptado de outra finalidade?',
+      exemplo: 'equipamento "adaptado" para uma função que não é a dele.' }
+  ]},
+
+  // ========== D. TREINAMENTOS ==========
+  { id: 13, secao: 'D', subs: [
+    { id: '13a', label: 'treinamento de todos os setores', pergunta: 'Todos os setores — incluindo manutenção e limpeza — passaram por treinamento de BPF nos últimos 12 meses?',
+      exemplo: 'confira as listas de presença: as áreas de apoio costumam ficar de fora.' },
+    { id: '13b', label: 'efetividade', pergunta: 'Um colaborador escolhido ao acaso saberia explicar as regras de BPF do setor dele?',
+      exemplo: 'imagine o fiscal entrevistando 3 pessoas em pontos diferentes da fábrica.' },
+    { id: '13c', label: 'integração', pergunta: 'Funcionário novo passa pela integração antes de assumir o posto na produção?',
+      exemplo: 'pense no último contratado: foi treinado antes de começar?' },
+    { id: '13d', label: 'cronograma', pergunta: 'Existe cronograma anual de treinamentos com temas, datas e carga horária definidos?',
+      exemplo: 'e ele foi cumprido — não apenas escrito.' }
+  ]},
+
+  // ========== E. CONTROLE DO PROCESSO ==========
+  { id: 14, secao: 'E', subs: [
+    { id: '14a', rr: true, pergunta: 'A empresa acompanha desvios, tendências de produção, não conformidades e ações corretivas?',
+      exemplo: 'registros que permitem enxergar o histórico, não só o dia de hoje.' }
+  ]},
+  // Item 15 omitido (aplicável apenas a fabricantes de ingredientes a partir de matérias-primas brutas)
+  { id: 16, secao: 'E', subs: [
+    { id: '16a', label: 'execução do teste', rr: true, pergunta: 'A empresa realiza teste de homogeneidade de mistura?',
+      exemplo: 'no misturador, com laudo arquivado.' },
+    { id: '16b', label: 'capacidade da equipe', rr: true, pergunta: 'Existe procedimento escrito e ao menos uma pessoa treinada para conduzir o teste de homogeneidade?',
+      exemplo: 'do preparo do traçador à interpretação do CV%.' },
+    { id: '16c', label: 'tempo validado', rr: true, invertida: true, pergunta: 'Os operadores costumam reduzir o tempo de mistura em fórmulas mais simples para ganhar produtividade?',
+      exemplo: 'compare o tempo praticado com o validado no laudo.' },
+    { id: '16d', rr: true, invertida: true, pergunta: 'A empresa realiza o teste de homogeneidade somente no misturador principal?',
+      exemplo: 'se há mais de um misturador, cada um precisa do seu teste.' }
+  ]},
+  { id: 17, secao: 'E', subs: [
+    { id: '17a', label: 'cronograma', rr: true, pergunta: 'Todos os produtos acabados passam por análise laboratorial ao menos 1x por ano?',
+      exemplo: 'inclua os produtos de menor volume.' },
+    { id: '17b', rr: true, invertida: true, pergunta: 'A empresa dispensa a análise de contaminantes no produto acabado?',
+      exemplo: 'micotoxinas, salmonela e metais pesados no produto final.' },
+    { id: '17c', rr: true, pergunta: 'Os laudos de níveis de garantia são analisados pelo Controle de Qualidade ou RT e comparados com o rótulo?',
+      exemplo: 'o resultado é conferido contra o que o rótulo declara.' },
+    { id: '17d', rr: true, pergunta: 'Há monitoramento de micotoxinas no produto acabado?',
+      exemplo: 'aflatoxina, fumonisina e zearalenona, conforme a categoria.' }
+  ]},
+
+  // ========== F. ELEMENTOS DE CONTROLE ==========
+  { id: 18, secao: 'F', subs: [
+    { id: '18a', label: 'manual atualizado', pergunta: 'O estabelecimento tem Manual de Boas Práticas, com todos os POPs, atualizado?',
+      exemplo: 'revisado recentemente e disponível nos pontos de uso.' },
+    { id: '18b', label: 'direção ciente', invertida: true, pergunta: 'O MBPF e os POPs são assunto da equipe da qualidade, sem necessidade de envolvimento formal da direção?',
+      exemplo: 'pense em quem assina a revisão anual e aprova os planos de ação.' },
+    { id: '18c', pergunta: 'O fluxograma descreve a fábrica como ela é hoje, incluindo as últimas mudanças de equipamentos e etapas?',
+      exemplo: 'compare o fluxograma com o chão de fábrica atual.' }
+  ]},
+
+  // ========== F.1 FORNECEDORES ==========
+  { id: 19, secao: 'F.1', subs: [
+    { id: '19a', rr: true, pergunta: 'É exigida documentação completa de todos os fornecedores antes da compra?',
+      exemplo: 'a mesma exigência para fornecedor novo e antigo.' },
+    { id: '19b', rr: true, pergunta: 'Existe uma lista de fornecedores aptos para compra?',
+      exemplo: 'lista formal, usada de fato na hora de comprar.' }
+  ]},
+  { id: 20, secao: 'F.1', subs: [
+    { id: '20a', rr: true, pergunta: 'As análises de recebimento de matérias-primas (ex.: classificação do milho) são feitas antes do descarregamento?',
+      exemplo: 'a decisão de aceite é tomada antes de o caminhão descarregar.' },
+    { id: '20b', rr: true, invertida: true, pergunta: 'Os colaboradores recebem matérias-primas sem rótulo ou laudo para otimizar o tempo?',
+      exemplo: 'pense nos dias de fila no recebimento.' }
+  ]},
+  { id: 21, secao: 'F.1', subs: [
+    { id: '21', obrigatorio: true, rr: true, invertida: true, pergunta: 'Numa vistoria agora, poderia aparecer algum lote vencido esquecido no estoque?',
+      exemplo: 'inclua prateleiras altas, a área de segregação e sacos abertos soltos.' }
+  ]},
+  { id: 22, secao: 'F.1', subs: [
+    { id: '22', obrigatorio: true, rr: true, pergunta: 'Todos os ingredientes e aditivos em uso são autorizados pelo MAPA e compatíveis com as espécies-alvo?',
+      exemplo: 'atenção a aditivos proibidos para ruminantes em fórmulas de bovinos.' }
+  ]},
+
+  // ========== F.2 LIMPEZA ==========
+  { id: 23, secao: 'F.2', subs: [
+    { id: '23a', pergunta: 'O cronograma de limpeza cobre todos os setores e equipamentos, com frequência e responsável definidos?',
+      exemplo: 'silos, moegas, transportadores e balanças costumam ficar de fora.' },
+    { id: '23b', invertida: true, pergunta: 'Os equipamentos de produção são limpos somente do lado externo?',
+      exemplo: 'o interno, por onde o produto passa, também precisa de limpeza.' }
+  ]},
+  { id: 24, secao: 'F.2', subs: [
+    { id: '24a', label: 'execução documentada', rr: true, invertida: true, pergunta: 'Os colaboradores preenchem o registro de limpeza de vários dias de uma vez só para poupar tempo?',
+      exemplo: 'registro preenchido "de memória" no fim da semana conta.' },
+    { id: '24b', label: 'estado atual', rr: true, pergunta: 'Se um fiscal entrasse agora, encontraria a fábrica limpa?',
+      exemplo: 'inclua cantos de equipamentos, banheiros e vestiários.' }
+  ]},
+
+  // ========== F.3 HIGIENE PESSOAL ==========
+  { id: 25, secao: 'F.3', subs: [
+    { id: '25a', label: 'uniforme', pergunta: 'Os colaboradores possuem um cuidado com os uniformes, usando-os exclusivamente na fábrica, limpos e em bom estado em todos os turnos?',
+      exemplo: 'observe também o turno da noite e os terceirizados.' },
+    { id: '25b', label: 'hábitos', invertida: true, pergunta: 'Aliança e relógio podem ser usados na produção, por serem itens pessoais de difícil remoção?',
+      exemplo: 'considere o que se vê na fábrica hoje, não o que diz o POP.' },
+    { id: '25c', label: 'visitantes', pergunta: 'Visitantes seguem as mesmas regras de higiene e uniforme que os funcionários?',
+      exemplo: 'inclua motoristas, técnicos externos e clientes em visita.' },
+    { id: '25d', pergunta: 'Existe monitoramento do comportamento dos colaboradores frente às normas de higiene?',
+      exemplo: 'alguém observa e corrige no dia a dia, com registro.' },
+    { id: '25e', invertida: true, pergunta: 'Os colaboradores se alimentam ou bebem dentro da área de produção?',
+      exemplo: 'café, garrafa de água ou lanche na linha contam.' }
+  ]},
+
+  // ========== F.4 ÁGUA (precedida pelo filtro de água) ==========
+  { id: 26, secao: 'F.4', subs: [
+    { id: '26a', pergunta: 'A empresa tem descritas todas as etapas, da obtenção ao uso da água?',
+      exemplo: 'fluxograma sem trechos "esquecidos".' },
+    { id: '26b', label: 'tratamento', condicional: 'agua-nao-rede', pergunta: 'É realizado o tratamento da água?',
+      exemplo: 'cloração ou filtração com monitoramento, conforme a fonte.' }
+  ]},
+  { id: 27, secao: 'F.4', subs: [
+    { id: '27a', condicional: 'agua-rede', pergunta: 'São monitorados os resultados das análises da água fornecida pela distribuidora?',
+      exemplo: 'a empresa guarda e confere os laudos da concessionária.' },
+    { id: '27b', condicional: 'agua-ingrediente', pergunta: 'São realizadas análises microbiológicas da água?',
+      exemplo: 'na frequência prevista, com laudos arquivados.' }
+  ]},
+  { id: 28, secao: 'F.4', subs: [
+    { id: '28', condicional: 'agua-reservatorio', pergunta: 'A empresa realiza a higienização dos reservatórios anualmente?',
+      exemplo: 'com registro de data, responsável e método.' }
+  ]},
+
+  // ========== F.5 CONTAMINAÇÃO CRUZADA ==========
+  { id: 29, secao: 'F.5', subs: [
+    { id: '29a', label: 'matriz de perigos', pergunta: 'A empresa possui descritas todas as etapas do processo e, para cada etapa, os perigos físicos, químicos e biológicos?',
+      exemplo: 'alguma etapa ficou de fora, como recebimento, ensaque ou expedição?' }
+  ]},
+  { id: 30, secao: 'F.5', subs: [
+    { id: '30a', rr: true, pergunta: 'Para cada perigo listado, existe monitoramento?',
+      exemplo: 'cruze a lista de perigos com o que é de fato monitorado.' },
+    { id: '30b', rr: true, invertida: true, pergunta: 'A empresa envia amostras para análise laboratorial só quando surge algum problema, sem plano ou cronograma definido?',
+      exemplo: 'análises "quando dá" ou só após reclamação contam aqui.' }
+  ]},
+  { id: 31, secao: 'F.5', condicional: 'sequenciamento', subs: [
+    { id: '31', rr: true, pergunta: 'O operador de produção conhece os critérios de sequenciamento de produção?',
+      exemplo: 'espécie-alvo, medicamento, alergênico — confira na ordem de produção de hoje.' }
+  ]},
+  { id: 32, secao: 'F.5', condicional: 'sequenciamento', subs: [
+    { id: '32', obrigatorio: true, rr: true, invertida: true, pergunta: 'Os colaboradores têm liberdade de ignorar a matriz de sequenciamento quando surge pedido de última hora?',
+      exemplo: 'compare as ordens de produção dos últimos 30 dias com o que diz o POP.' }
+  ]},
+  { id: 33, secao: 'F.5', condicional: 'flushing', subs: [
+    { id: '33', rr: true, pergunta: 'O flushing foi validado por estudo documentado, com laudo e assinatura do RT?',
+      exemplo: 'amostragem em pontos críticos após o arraste, com resultado dentro do limite.' }
+  ]},
+  { id: 34, secao: 'F.5', condicional: 'flushing', subs: [
+    { id: '34', invertida: true, pergunta: 'O flushing pode ser dispensado entre lotes parecidos, sem considerar os contaminantes, para não atrasar a produção?',
+      exemplo: 'considere os lotes críticos dos últimos 60 dias.' }
+  ]},
+  { id: 35, secao: 'F.5', condicional: 'flushing', subs: [
+    { id: '35', pergunta: 'Há registro do destino do material de arraste em cada execução?',
+      exemplo: 'descarte, reprocessamento ou inclusão — lote a lote, sem lacunas.' }
+  ]},
+  { id: 36, secao: 'F.5', condicional: 'flushing', subs: [
+    { id: '36', invertida: true, pergunta: 'Os colaboradores utilizam o material de arraste em qualquer fórmula, desde que em pequena quantidade?',
+      exemplo: 'pense nas regras de segregação por medicamento e alergênico.' }
+  ]},
+
+  // ========== F.6 MANUTENÇÃO E CALIBRAÇÃO ==========
+  { id: 37, secao: 'F.6', subs: [
+    { id: '37', pergunta: 'A lista do POP de manutenção e calibração inclui todos os equipamentos e instrumentos críticos?',
+      exemplo: 'cruze o inventário real com a lista: sobra algum de fora?' }
+  ]},
+  { id: 38, secao: 'F.6', subs: [
+    { id: '38a', label: 'calibração anual', rr: true, pergunta: 'Todas as balanças têm certificado de calibração emitido nos últimos 12 meses?',
+      exemplo: 'inclua a balança "reserva" e a do ensaque.' },
+    { id: '38b', label: 'identificação', rr: true, pergunta: 'Cada equipamento tem identificação única (TAG ou patrimônio) usada também nos registros?',
+      exemplo: 'o nome que está no POP é o mesmo que está colado no equipamento?' }
+  ]},
+
+  // ========== F.7 CONTROLE DE PRAGAS ==========
+  { id: 39, secao: 'F.7', subs: [
+    { id: '39a', label: 'execução do POP', rr: true, pergunta: 'Existe mapa de iscas e controle de consumo?',
+      exemplo: 'mapa atualizado e planilha de consumo por ponto.' },
+    { id: '39b', rr: true, invertida: true, pergunta: 'Aves e outras pragas conseguem entrar nos galpões (beirais abertos, portas que ficam abertas)?',
+      exemplo: 'olhe beirais, telas e portas que vivem abertas.' },
+    { id: '39c', label: 'qualificação terceirizado', rr: true, condicional: 'pragas-terceirizado', pergunta: 'A empresa aplicadora tem licença sanitária vigente e ART arquivadas na fábrica?',
+      exemplo: 'contrato, licença e relatórios mensais localizáveis em minutos.' }
+  ]},
+
+  // ========== F.8 RESÍDUOS ==========
+  { id: 40, secao: 'F.8', subs: [
+    { id: '40a', condicional: 'medicamento', invertida: true, pergunta: 'Os resíduos contaminados por medicamento são descartados no lixo comum, quando bem ensacados?',
+      exemplo: 'observe a segregação visível na fábrica e os contratos de destinação.' },
+    { id: '40b', invertida: true, pergunta: 'São reutilizados sacos ou big bags de insumos para o descarte de resíduos dentro da fábrica?',
+      exemplo: 'reaproveitar embalagem de matéria-prima para lixo gera risco.' },
+    { id: '40c', pergunta: 'Os recipientes para descarte estão identificados conforme a classe do resíduo?',
+      exemplo: 'orgânico, reciclável, perigoso, contaminado — cada um identificado.' }
+  ]},
+
+  // ========== F.9 RASTREABILIDADE ==========
+  { id: 41, secao: 'F.9', subs: [
+    { id: '41a', obrigatorio: true, rr: true, pergunta: 'Partindo de um lote acabado aleatório, a empresa chega às matérias-primas, registros e clientes em menos de 4 horas?',
+      exemplo: 'faça a simulação e cronometre, sem acionar várias áreas.' },
+    { id: '41b', obrigatorio: true, rr: true, pergunta: 'Qualquer colaborador consegue fazer a rastreabilidade seguindo a descrição do POP?',
+      exemplo: 'sem depender de uma única pessoa que "sabe de cabeça".' }
+  ]},
+  { id: 42, secao: 'F.9', subs: [
+    { id: '42', invertida: true, pergunta: 'Reclamações de clientes resolvidas por telefone dispensam registro formal?',
+      exemplo: 'pense na última reclamação recebida: onde ela está registrada?' }
+  ]},
+
+  // ========== G. AUTORIZAÇÃO PARA MEDICAMENTOS ==========
+  // ========== G. MEDICAMENTOS — AUTORIZAÇÃO (todos medicamentosos) ==========
+  { id: 47, secao: 'G', condicional: 'medicamento', subs: [
+    { id: '47', obrigatorio: true, pergunta: 'A autorização específica do MAPA para produtos medicamentosos está vigente e cobre exatamente o que é fabricado?',
+      exemplo: 'a autorização é distinta do registro comum do estabelecimento.' }
+  ]},
+  { id: 48, secao: 'G', condicional: 'medicamento', subs: [
+    { id: '48', pergunta: 'Existe local específico e identificado para guardar os medicamentos e produtos intermediários medicamentosos usados na fabricação?',
+      exemplo: 'local definido e com acesso controlado — não "junto com o resto".' }
+  ]},
+  { id: 49, secao: 'G', condicional: 'medicamento', subs: [
+    { id: '49', rr: true, pergunta: 'O estudo de validação de limpeza bate com a fábrica real (estruturas, equipamentos, linhas, fluxograma, categorias)?',
+      exemplo: 'o que está no estudo aprovado é o que se vê na linha hoje.' }
+  ]},
+
+  // ========== G.1 MEDICAMENTOS — CONTROLE DE PRODUÇÃO (todos medicamentosos) ==========
+  { id: 50, secao: 'G.1', condicional: 'medicamento', subs: [
+    { id: '50', pergunta: 'As medidas contra contaminação cruzada por medicamentos estão escritas em procedimento e são cumpridas na rotina?',
+      exemplo: 'procedimento que existe no papel e é seguido no chão de fábrica.' }
+  ]},
+  { id: 51, secao: 'G.1', condicional: 'medicamento', subs: [
+    { id: '51', rr: true, pergunta: 'Todos os medicamentos usados são licenciados no MAPA e permitidos em alimentação animal?',
+      exemplo: 'confira o licenciamento de cada medicamento em uso.' }
+  ]},
+  { id: 52, secao: 'G.1', condicional: 'medicamento', subs: [
+    { id: '52', rr: true, pergunta: 'Os produtos intermediários medicamentosos vêm de estabelecimentos autorizados a fabricá-los?',
+      exemplo: 'fornecedor com autorização específica — se a empresa não compra intermediário, marque "Não se aplica".' }
+  ]},
+  { id: 53, secao: 'G.1', condicional: 'medicamento', subs: [
+    { id: '53', pergunta: 'Os rótulos dos produtos medicamentosos atendem aos requisitos específicos de rotulagem?',
+      exemplo: 'a rotulagem de medicamentoso vai além da do produto comum.' }
+  ]},
+  { id: 54, secao: 'G.1', condicional: 'medicamento', subs: [
+    { id: '54', rr: true, invertida: true, pergunta: 'A limpeza de linha pode seguir um jeito mais rápido que o do estudo validado, quando a equipe já tem prática?',
+      exemplo: 'compare a limpeza real com o estudo de validação aprovado.' }
+  ]},
+  { id: 55, secao: 'G.1', condicional: 'medicamento', subs: [
+    { id: '55', rr: true, pergunta: 'O material de arraste e os produtos do sequenciamento têm destinação registrada e adequada?',
+      exemplo: 'rastreie para onde foi o material — sem "sumir".' }
+  ]},
+  { id: 56, secao: 'G.1', condicional: 'medicamento', subs: [
+    { id: '56', rr: true, pergunta: 'A empresa verifica periodicamente o limite máximo de contaminação cruzada nos produtos não-alvo?',
+      exemplo: 'análise no produto que NÃO leva o medicamento, para provar que o arraste está sob controle.' }
+  ]},
+  { id: 57, secao: 'G.1', condicional: 'medicamento', subs: [
+    { id: '57', rr: true, pergunta: 'A empresa quantifica o princípio ativo no produto medicamentoso para verificar o processo?',
+      exemplo: 'análise que confirma que a dose do fármaco saiu como previsto.' }
+  ]},
+  { id: 58, secao: 'G.1', condicional: 'medicamento', subs: [
+    { id: '58', pergunta: 'Quando há associação de fármacos, existe amparo científico documentado?',
+      exemplo: 'combinar princípios ativos exige respaldo técnico — sem associação, marque "Não se aplica".' }
+  ]},
+  { id: 59, secao: 'G.1', condicional: 'medicamento', subs: [
+    { id: '59', pergunta: 'A fabricação de medicamentosos tem registros auditáveis (ordem de produção, lote, fármaco, dose)?',
+      exemplo: 'dá para reconstruir cada lote pelos registros?' }
+  ]},
+  { id: 60, secao: 'G.1', condicional: 'medicamento', subs: [
+    { id: '60', pergunta: 'Os colaboradores adotam a sequência de produção ou a limpeza de arraste nos caminhões?',
+      exemplo: 'pense no graneleiro que transporta produto medicamentoso.' }
+  ]},
+
+  // ========== G.2 MEDICAMENTOS — PRODUTO DE PRONTO USO ==========
+  { id: 61, secao: 'G.2', condicional: 'med-produtor-rural', subs: [
+    { id: '61', pergunta: 'A classificação do produtor rural no sistema oficial está correta?',
+      exemplo: 'classificação compatível com a atividade de produtor rural.' }
+  ]},
+  { id: 62, secao: 'G.2', condicional: 'med-pronto-uso', subs: [
+    { id: '62', pergunta: 'Cada fabricação é amparada por prescrição médico-veterinária ou programa sanitário válido?',
+      exemplo: 'sem receita ou programa que ampare, não se fabrica.' }
+  ]},
+  { id: 63, secao: 'G.2', condicional: 'med-pronto-uso', subs: [
+    { id: '63', pergunta: 'Os medicamentos adquiridos entram no produto na dose e indicação corretas (bula, prescrição ou programa)?',
+      exemplo: 'dose e indicação conferem com a bula e a receita.' }
+  ]},
+  { id: 64, secao: 'G.2', condicional: 'med-pronto-uso', subs: [
+    { id: '64', pergunta: 'Os produtos intermediários medicamentosos adquiridos entram na dose e indicação corretas?',
+      exemplo: 'mesma checagem de dose, agora para o intermediário comprado.' }
+  ]},
+  { id: 65, secao: 'G.2', condicional: 'med-pronto-uso', subs: [
+    { id: '65', pergunta: 'Quando a dose ou o tempo de tratamento diferem da bula, há justificativa registrada?',
+      exemplo: 'uso fora da bula exige justificativa técnica.' }
+  ]},
+  { id: 66, secao: 'G.2', condicional: 'med-pronto-uso', subs: [
+    { id: '66', rr: true, invertida: true, pergunta: 'Produtos de pronto uso medicamentosos podem ser vendidos a revendas ou terceiros, além do proprietário dos animais?',
+      exemplo: 'pronto uso medicamentoso vai só para o dono dos animais.' }
+  ]},
+  { id: 67, secao: 'G.2', condicional: 'med-pronto-uso', subs: [
+    { id: '67', pergunta: 'Dá para rastrear um produto de pronto uso medicamentoso de forma completa e rápida?',
+      exemplo: 'do fármaco recebido ao cliente que recebeu o lote.' }
+  ]},
+
+  // ========== G.3 MEDICAMENTOS — PRODUTO INTERMEDIÁRIO ==========
+  { id: 68, secao: 'G.3', condicional: 'med-intermediario', subs: [
+    { id: '68', pergunta: 'Cada fabricação de intermediário é amparada por documento do estabelecimento solicitante autorizado?',
+      exemplo: 'quem pediu precisa ser autorizado, com documento arquivado.' }
+  ]},
+  { id: 69, secao: 'G.3', condicional: 'med-intermediario', subs: [
+    { id: '69', rr: true, invertida: true, pergunta: 'Produtos intermediários medicamentosos podem ser vendidos a estabelecimentos não autorizados, desde que cadastrados?',
+      exemplo: 'intermediário medicamentoso só vai para estabelecimento autorizado.' }
+  ]},
+  { id: 70, secao: 'G.3', condicional: 'med-intermediario', subs: [
+    { id: '70', pergunta: 'Dá para rastrear um produto intermediário medicamentoso de forma completa?',
+      exemplo: 'rastreabilidade do fármaco até o cliente autorizado.' }
+  ]}
+];
+
+const OPCOES = [
+  { valor: 100,  label: 'Sim' },
+  { valor: 50,   label: 'Parcialmente' },
+  { valor: 0,    label: 'Não' },
+  { valor: null, label: 'Não se aplica' }
+];
+
+/* ==============================================================================
+   STATE
+   ============================================================================== */
+let state = {
+  lead: {},
+  itensAtivos: [],
+  indiceItem: 0,
+  respostas: {},        // { subId: valor }
+  filtros: {
+    pragasTipo: null,           // 'proprio' | 'terceirizado'
+    medidasPreventivas: null,   // { sequenciamento: bool, flushing: bool }
+    agua: null,                 // { reservatorio: bool, ingrediente: bool, redePublica: bool }
+    querMed: null,              // null = não perguntado | true = responder módulo | false = finalizar
+    medCategoria: null          // { produtorRural: bool, prontoUso: bool, intermediario: bool }
+  }
+};
+
+/* ==============================================================================
+   NAVIGATION
+   ============================================================================== */
+function goTo(screen) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + screen).classList.add('active');
+  // Hero só aparece na tela inicial combinada
+  const hero = document.getElementById('hero');
+  if (hero) hero.style.display = (screen === 'welcome-lead') ? '' : 'none';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ==============================================================================
+   LEAD CAPTURE
+   ============================================================================== */
+function submitLead(event) {
+  event.preventDefault();
+  const form = event.target;
+  const formData = new FormData(form);
+  state.lead = {
+    nome: formData.get('nome'),
+    empresa: formData.get('empresa'),
+    registro: formData.get('registro') || '',
+    email: formData.get('email'),
+    medicamento: formData.get('medicamento'),
+    timestamp: new Date().toISOString()
+  };
+
+  // ===== PONTO DE INTEGRAÇÃO COM CRM =====
+  // Substitua o trecho abaixo por uma chamada fetch() ao seu endpoint
+  // (HubSpot Forms API, RD Station, webhook, etc.)
+  console.log('[Dal Cero] Lead capturado:', state.lead);
+
+  iniciarQuiz();
+}
+
+/* ==============================================================================
+   QUIZ — visibilidade de sub-perguntas conforme os filtros
+   ============================================================================== */
+// Uma sub é visível dependendo do seu condicional e dos filtros já respondidos.
+function subVisivel(sub) {
+  const cond = sub.condicional;
+  if (!cond) return true;
+  if (cond === 'medicamento') return state.lead.medicamento === 'sim';
+  if (cond === 'pragas-terceirizado') return state.filtros.pragasTipo === 'terceirizado';
+  const ag = state.filtros.agua;
+  if (cond === 'agua-rede')         return !!ag && ag.redePublica === true;
+  if (cond === 'agua-nao-rede')     return !!ag && ag.redePublica === false;
+  if (cond === 'agua-ingrediente')  return !!ag && ag.ingrediente === true;
+  if (cond === 'agua-reservatorio') return !!ag && ag.reservatorio === true;
+  return true;
+}
+// Subs de um item que devem ser exibidas/pontuadas agora.
+function subsAtivas(item) {
+  return item.subs.filter(subVisivel);
+}
+
+/* ==============================================================================
+   QUIZ — montagem da fila de itens ativos
+   ============================================================================== */
+function recalcItensAtivos() {
+  const usaMed = state.lead.medicamento === 'sim';
+  const mp = state.filtros.medidasPreventivas; // null = não decidido ainda
+  const mc = state.filtros.medCategoria;       // null = não decidido ainda
+  state.itensAtivos = ITEMS.filter(it => {
+    const ehMed = it.secao.charAt(0) === 'G';
+    // Quem optou por finalizar (querMed === false) não vê nenhum item do módulo de medicamentos
+    if (ehMed && usaMed && state.filtros.querMed === false) return false;
+    if (it.condicional === 'medicamento' && !usaMed) return false;
+    if (it.condicional === 'med-produtor-rural') {
+      if (!usaMed) return false;
+      if (mc === null) return true;     // mantém para que renderItem dispare o filtro de categoria
+      return mc.produtorRural === true;
+    }
+    if (it.condicional === 'med-pronto-uso') {
+      if (!usaMed) return false;
+      if (mc === null) return true;
+      return mc.produtorRural === true || mc.prontoUso === true;
+    }
+    if (it.condicional === 'med-intermediario') {
+      if (!usaMed) return false;
+      if (mc === null) return true;
+      return mc.intermediario === true;
+    }
+    if (it.condicional === 'sequenciamento') {
+      if (mp === null) return true;     // ainda não filtrado — manter para que renderItem dispare o filtro
+      return mp.sequenciamento === true;
+    }
+    if (it.condicional === 'flushing') {
+      if (mp === null) return true;
+      return mp.flushing === true;
+    }
+    return true;
+  })
+  .map(it => ({ ...it, subs: subsAtivas(it) }))
+  .filter(it => it.subs.length > 0);   // item sem subs visíveis (ex.: água) é removido da fila
+}
+
+function iniciarQuiz() {
+  recalcItensAtivos();
+  state.indiceItem = 0;
+  state.respostas = {};
+  renderItem();
+  goTo('quiz');
+}
+
+/* ==============================================================================
+   RENDER ITEM
+   ============================================================================== */
+function renderItem() {
+  const item = state.itensAtivos[state.indiceItem];
+
+  // Verifica filtro de contaminação cruzada (antes de itens 31-36 condicionais)
+  if ((item.condicional === 'sequenciamento' || item.condicional === 'flushing')
+      && state.filtros.medidasPreventivas === null) {
+    goTo('filter-cc');
+    return;
+  }
+
+  // Verifica se entrar no F.7 exige filtro de pragas
+  if (item.secao === 'F.7' && state.filtros.pragasTipo === null) {
+    goTo('filter-pragas');
+    return;
+  }
+
+  // Verifica se entrar no F.4 exige filtro de água
+  if (item.secao === 'F.4' && state.filtros.agua === null) {
+    goTo('filter-agua');
+    return;
+  }
+
+  // Ao entrar no módulo Medicamentos (seções G*): primeiro pergunta se quer responder; depois a categoria
+  if (item.secao.charAt(0) === 'G' && state.lead.medicamento === 'sim') {
+    if (state.filtros.querMed === null) { goTo('gate-meds'); return; }
+    if (state.filtros.medCategoria === null) { goTo('filter-medcategoria'); return; }
+  }
+
+  // Subs visíveis conforme filtros (medicamento, pragas, água)
+  const subs = subsAtivas(item);
+
+  const total = state.itensAtivos.length;
+  const atual = state.indiceItem + 1;
+  const pct = Math.round((atual / total) * 100);
+
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = `Item ${atual} de ${total}`;
+  document.getElementById('progress-percent').textContent = pct + '%';
+  document.getElementById('section-pill').textContent = SECTIONS[item.secao].nome;
+  document.getElementById('item-title').textContent = `Item ${item.id}`;
+
+  // Nota explicativa desativada por solicitação
+  document.getElementById('item-note').style.display = 'none';
+
+  // Renderizar subs
+  const container = document.getElementById('subs-container');
+  container.innerHTML = '';
+  subs.forEach(sub => {
+    const block = document.createElement('div');
+    block.className = 'sub-block';
+    let labelHtml = '';
+    if (sub.label || subs.length > 1) {
+      const tag = `<span class="sub-label">${escapeHtml(sub.id)}</span>`;
+      const labelTxt = sub.label ? `<span class="sub-tag-text">— ${escapeHtml(sub.label)}</span>` : '';
+      labelHtml = `<div>${tag}${labelTxt}</div>`;
+    }
+    const badges = (sub.obrigatorio ? '<span class="sub-label" style="background: #fde2cf; color: var(--marrom); margin-left: 4px;">(O)</span>' : '')
+                 + (sub.rr ? '<span class="sub-label" style="background: #fef3c7; color: var(--navy); margin-left: 4px;">(RR)</span>' : '');
+    const exemploHtml = sub.exemplo
+      ? `<div class="sub-exemplo"><b>💡 Considere:</b> ${escapeHtml(sub.exemplo)}</div>`
+      : '';
+    block.innerHTML = `
+      ${labelHtml ? labelHtml.replace('</div>', badges + '</div>') : ''}
+      <div class="sub-pergunta">${escapeHtml(sub.pergunta)}</div>
+      ${exemploHtml}
+      <div class="answers" data-sub="${sub.id}"></div>
+    `;
+    container.appendChild(block);
+
+    const answersEl = block.querySelector('.answers');
+    OPCOES.forEach(op => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'answer-option';
+      btn.textContent = op.label;
+      const respAtual = state.respostas[sub.id];
+      const isSelected = (respAtual === op.valor) || (respAtual === null && op.valor === null && Object.prototype.hasOwnProperty.call(state.respostas, sub.id));
+      if (isSelected) btn.classList.add('selected');
+      btn.addEventListener('click', () => {
+        state.respostas[sub.id] = op.valor;
+        // Re-render selection state for this row
+        answersEl.querySelectorAll('.answer-option').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        atualizarBotaoProximo();
+      });
+      answersEl.appendChild(btn);
+    });
+  });
+
+  // Botões
+  document.getElementById('btn-prev').classList.toggle('show', state.indiceItem > 0);
+  document.getElementById('btn-next').textContent = (state.indiceItem === total - 1) ? 'Ver resultado →' : 'Próximo →';
+  atualizarBotaoProximo();
+}
+
+function atualizarBotaoProximo() {
+  const item = state.itensAtivos[state.indiceItem];
+  const subs = subsAtivas(item);
+  const todasRespondidas = subs.every(s => Object.prototype.hasOwnProperty.call(state.respostas, s.id));
+  document.getElementById('btn-next').disabled = !todasRespondidas;
+}
+
+function nextItem() {
+  if (state.indiceItem < state.itensAtivos.length - 1) {
+    state.indiceItem++;
+    renderItem();
+  } else {
+    finalizarQuiz();
+  }
+}
+
+function prevItem() {
+  if (state.indiceItem > 0) {
+    state.indiceItem--;
+    renderItem();
+  }
+}
+
+function setFilterPragas(tipo) {
+  state.filtros.pragasTipo = tipo;
+  goTo('quiz');
+  renderItem();
+}
+
+// Gate: a pessoa decide responder o módulo de medicamentos ou finalizar
+function gateMedResponder() {
+  state.filtros.querMed = true;
+  goTo('quiz');
+  renderItem();   // dispara o filtro de categoria em seguida
+}
+function gateMedFinalizar() {
+  state.filtros.querMed = false;
+  recalcItensAtivos();   // remove os itens de medicamentos da fila
+  finalizarQuiz();
+}
+
+// Categoria (multi-seleção) — adiciona/remove itens inteiros (61, 62–67, 68–70)
+function confirmFilterMedCategoria() {
+  state.filtros.medCategoria = {
+    produtorRural: document.getElementById('mc-produtor-rural').checked,
+    prontoUso:     document.getElementById('mc-pronto-uso').checked,
+    intermediario: document.getElementById('mc-intermediario').checked
+  };
+
+  const itemAtualId = state.itensAtivos[state.indiceItem]?.id;
+  recalcItensAtivos();
+  const novoIdx = state.itensAtivos.findIndex(it => it.id >= itemAtualId);
+  state.indiceItem = novoIdx >= 0 ? novoIdx : state.itensAtivos.length - 1;
+
+  goTo('quiz');
+  renderItem();
+}
+
+function confirmFilterCC() {
+  const seq = document.getElementById('cc-seq').checked;
+  const flush = document.getElementById('cc-flush').checked;
+  state.filtros.medidasPreventivas = { sequenciamento: seq, flushing: flush };
+
+  // Identifica o item atual (pode ter sido o trigger do filtro)
+  const itemAtualId = state.itensAtivos[state.indiceItem]?.id;
+
+  // Recalcula a lista de itens ativos
+  recalcItensAtivos();
+
+  // Tenta manter a posição: busca o mesmo item; se não existe mais, salta para o próximo
+  const novoIdx = state.itensAtivos.findIndex(it => it.id >= itemAtualId);
+  state.indiceItem = novoIdx >= 0 ? novoIdx : state.itensAtivos.length - 1;
+
+  goTo('quiz');
+  renderItem();
+}
+
+function confirmFilterAgua() {
+  state.filtros.agua = {
+    reservatorio: document.getElementById('ag-reservatorio').checked,
+    ingrediente:  document.getElementById('ag-ingrediente').checked,
+    redePublica:  document.getElementById('ag-rede').checked
+  };
+
+  const itemAtualId = state.itensAtivos[state.indiceItem]?.id;
+  recalcItensAtivos();
+  const novoIdx = state.itensAtivos.findIndex(it => it.id >= itemAtualId);
+  state.indiceItem = novoIdx >= 0 ? novoIdx : state.itensAtivos.length - 1;
+
+  goTo('quiz');
+  renderItem();
+}
+
+/* ==============================================================================
+   SCORE — Cálculo com pesos
+   Sim=100, Parcial=50, Não=0, N/A=ignorado.
+   Subitens com invertida: true têm o valor espelhado (Sim=0, Não=100).
+   (O) ou (RR) → peso 3. Caso contrário, peso 1.
+   ============================================================================== */
+function pesoSubitem(sub) {
+  return (sub.obrigatorio || sub.rr) ? 3 : 1;
+}
+
+function calcularScores() {
+  const scoresPorSecao = {};
+  Object.keys(SECTIONS).forEach(s => { scoresPorSecao[s] = { soma: 0, total: 0, qtd: 0 }; });
+
+  state.itensAtivos.forEach(item => {
+    subsAtivas(item).forEach(sub => {
+      const r = state.respostas[sub.id];
+      if (r === undefined) return;
+      if (r === null) return;     // N/A — ignora
+      const conf = sub.invertida ? 100 - r : r;  // polaridade: na invertida, "Sim" = não conformidade
+      const p = pesoSubitem(sub);
+      scoresPorSecao[item.secao].soma  += conf * p;
+      scoresPorSecao[item.secao].total += 100 * p;
+      scoresPorSecao[item.secao].qtd++;
+    });
+  });
+
+  // Score por seção em %
+  const pcts = {};
+  Object.keys(scoresPorSecao).forEach(s => {
+    const d = scoresPorSecao[s];
+    pcts[s] = d.total > 0 ? Math.round((d.soma / d.total) * 100) : null;
+  });
+
+  // Score geral = (sum somas) / (sum totais)
+  let geralSoma = 0, geralTotal = 0;
+  Object.values(scoresPorSecao).forEach(d => { geralSoma += d.soma; geralTotal += d.total; });
+  const geral = geralTotal > 0 ? Math.round((geralSoma / geralTotal) * 100) : 0;
+
+  return { geral, pcts };
+}
+
+function classificacao(score) {
+  if (score >= 90) return { nome: 'Risco Baixo',     classe: 'baixo' };
+  if (score >= 70) return { nome: 'Risco Médio',     classe: 'medio' };
+  if (score >= 50) return { nome: 'Risco Alto',      classe: 'alto' };
+  return                  { nome: 'Risco Altíssimo', classe: 'altissimo' };
+}
+
+/* ==============================================================================
+   RESULTADO
+   ============================================================================== */
+function finalizarQuiz() {
+  const { geral, pcts } = calcularScores();
+  const cls = classificacao(geral);
+
+  // Greeting
+  document.getElementById('results-greeting').textContent =
+    `${state.lead.nome.split(' ')[0]}, veja abaixo o resumo do diagnóstico de ${state.lead.empresa}.`;
+
+  // Score geral e classificação
+  document.getElementById('score-number').textContent = geral;
+  const badge = document.getElementById('maturity-badge');
+  badge.textContent = cls.nome;
+  badge.className = 'maturity-badge ' + cls.classe;
+
+  // Score por seção
+  const lista = document.getElementById('section-results-list');
+  lista.innerHTML = '';
+  Object.keys(SECTIONS).forEach(s => {
+    if (pcts[s] === null) return;
+    const sec = SECTIONS[s];
+    const pct = pcts[s];
+    const cls2 = pct >= 90 ? 'high' : (pct >= 70 ? 'mid' : (pct >= 50 ? 'low' : 'vlow'));
+    const row = document.createElement('div');
+    row.className = 'section-row';
+    row.innerHTML = `
+      <div>
+        <div class="section-name">${escapeHtml(sec.nome)}</div>
+        <div class="bar-container"><div class="bar ${cls2}" style="width: ${pct}%;"></div></div>
+      </div>
+      <div class="section-pct">${pct}</div>
+    `;
+    lista.appendChild(row);
+  });
+
+  // Riscos identificados — itens (O) ou (RR) com resposta Parcial ou Não
+  const riscos = [];
+  state.itensAtivos.forEach(item => {
+    subsAtivas(item).forEach(sub => {
+      const r = state.respostas[sub.id];
+      if (r === undefined || r === null) return;
+      const conf = sub.invertida ? 100 - r : r;  // polaridade: na invertida, "Sim" = não conformidade
+      if (conf >= 100) return;
+      if (!sub.obrigatorio && !sub.rr) return;
+      riscos.push({ sub, valor: conf, item });
+    });
+  });
+
+  const risksList = document.getElementById('risks-list');
+  const risksSection = document.getElementById('risks-section');
+  risksList.innerHTML = '';
+  if (riscos.length === 0) {
+    risksSection.querySelector('h3').textContent = 'Nenhum risco crítico identificado';
+    risksSection.querySelector('.sub').textContent =
+      'Excelente! Nenhum item obrigatório (O) ou de Risco Regulatório (RR) foi marcado como não conforme ou parcialmente conforme.';
+  } else {
+    risksSection.querySelector('h3').textContent = 'Riscos regulatórios identificados';
+    risksSection.querySelector('.sub').textContent =
+      `${riscos.length} item(ns) obrigatório(s) (O) ou de Risco Regulatório (RR) com não conformidade total ou parcial:`;
+    riscos.forEach(r => {
+      const partial = r.valor === 50;
+      const div = document.createElement('div');
+      div.className = 'risk-item' + (partial ? ' partial' : '');
+      div.innerHTML = `
+        <div class="risk-badges">
+          <span class="badge badge-status${partial ? ' partial' : ''}">${partial ? 'Parcial' : 'Não conforme'}</span>
+          ${r.sub.obrigatorio ? '<span class="badge badge-o">O</span>' : ''}
+          ${r.sub.rr ? '<span class="badge badge-rr">RR</span>' : ''}
+          <span style="color: var(--texto-suave); font-size: 10px; margin-left: 4px;">Item ${r.sub.id} · ${escapeHtml(SECTIONS[r.item.secao].nome)}</span>
+        </div>
+        <div class="risk-text">${escapeHtml(r.sub.pergunta)}</div>
+      `;
+      risksList.appendChild(div);
+    });
+  }
+
+  goTo('results');
+}
+
+/* ==============================================================================
+   UTIL
+   ============================================================================== */
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function restart() {
+  state = {
+    lead: {},
+    itensAtivos: [],
+    indiceItem: 0,
+    respostas: {},
+    filtros: { pragasTipo: null, medidasPreventivas: null, agua: null, querMed: null, medCategoria: null }
+  };
+  document.getElementById('lead-form').reset();
+  const seq = document.getElementById('cc-seq'); if (seq) seq.checked = false;
+  const fl  = document.getElementById('cc-flush'); if (fl) fl.checked = false;
+  // limpa checkboxes dos filtros de água e de categoria de medicamentos
+  ['ag-reservatorio', 'ag-ingrediente', 'ag-rede', 'mc-produtor-rural', 'mc-pronto-uso', 'mc-intermediario'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.checked = false;
+  });
+  goTo('welcome-lead');
+}
+</script>
+</body>
+</html>
