@@ -331,6 +331,8 @@
     line-height: 1.45;
   }
   .lgpd-box input { margin-top: 3px; flex-shrink: 0; }
+  .lgpd-box label.lgpd-opt { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--cinza-medio); }
+  .lgpd-nota { margin-top: 10px; font-size: 11px; color: var(--texto-suave); }
   .form-actions { margin-top: 22px; display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
 
   /* ---------- QUIZ ---------- */
@@ -647,11 +649,17 @@
             <label>
               <input type="checkbox" name="lgpd" required>
               <span>
-                <b>Autorizo</b>, conforme a LGPD (Lei 13.709/2018), o tratamento dos meus dados pessoais e das informações da minha empresa pela
-                <b>Dal Cero Consultoria</b>, com a finalidade de envio do relatório de autodiagnóstico e eventual contato comercial sobre serviços de
-                consultoria regulatória. Posso solicitar a exclusão a qualquer momento pelo e-mail <i>comercial@dalceroconsultoria.com.br</i>.
+                Autorizo, conforme a LGPD (Lei nº 13.709/2018), o tratamento dos meus dados pessoais e das informações da minha empresa pelo
+                <b>Grupo Dal Cero</b>, com a finalidade de gerar e me enviar o relatório desta simulação. <span class="required">*</span>
               </span>
             </label>
+            <label class="lgpd-opt">
+              <input type="checkbox" name="marketing">
+              <span>
+                Quero receber material de marketing e contato do time comercial do <b>Grupo Dal Cero</b> sobre produtos, serviços e conteúdos regulatórios.
+              </span>
+            </label>
+            <div class="lgpd-nota">Você pode solicitar a exclusão dos seus dados a qualquer momento pelo e-mail <i>comercial@dalceroconsultoria.com.br</i>.</div>
           </div>
 
           <div class="form-actions">
@@ -1402,6 +1410,7 @@ function submitLead(event) {
     registro: formData.get('registro') || '',
     email: formData.get('email'),
     medicamento: formData.get('medicamento'),
+    marketing: formData.get('marketing') ? 'sim' : 'nao',  // consentimento opcional de marketing
     timestamp: new Date().toISOString()
   };
 
@@ -1830,6 +1839,7 @@ function finalizarQuiz() {
 // Resumo do perfil da empresa (filtros escolhidos) — útil para o time comercial
 function montarPerfil() {
   const f = state.filtros, l = state.lead, p = [];
+  p.push('Aceita marketing: ' + (l.marketing === 'sim' ? 'Sim' : 'Não'));
   p.push('Fabrica medicamentos: ' + (l.medicamento === 'sim' ? 'Sim' : 'Não'));
   if (f.pragasTipo) p.push('Controle de pragas: ' + (f.pragasTipo === 'proprio' ? 'Próprio' : 'Terceirizado'));
   if (f.medidasPreventivas) {
@@ -1880,6 +1890,7 @@ function enviarRelatorio() {
   fd.append('empresa', state.lead.empresa || '');
   fd.append('email', state.lead.email || '');
   fd.append('registro', state.lead.registro || '');
+  fd.append('marketing', state.lead.marketing || 'nao');
   fd.append('data', state.lead.timestamp || '');
   fd.append('score_geral', String(ultimoResultado.geral));
   fd.append('classificacao', ultimoResultado.classificacao);
