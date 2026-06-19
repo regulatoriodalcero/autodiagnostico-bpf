@@ -40,6 +40,14 @@ function doPost(e) {
   }
 
   try {
+    atualizarResumo();
+    resultado.etapas.resumo = 'ok';
+  } catch (eRes) {
+    resultado.ok = false;
+    resultado.etapas.resumo = String(eRes);
+  }
+
+  try {
     if (dados.email) {
       MailApp.sendEmail({
         to: dados.email, name: REMETENTE_NOME,
@@ -111,9 +119,6 @@ function gravarNaPlanilha(d, id) {
       ['Data', 'Empresa', 'Respons\u00e1vel', 'E-mail', 'Registro MAPA', 'Score', 'Classifica\u00e7\u00e3o', 'Contato comercial']);
     aMkt.appendRow([d.data, d.empresa, d.nome, d.email, d.registro, Number(d.score), d.classificacao, '']);
   }
-
-  // Recalcula o dashboard (um erro aqui n\u00e3o impede a grava\u00e7\u00e3o dos dados)
-  try { atualizarResumo(ss); } catch (eRes) {}
 }
 
 function getOrCreateSheet(ss, nome, cabecalho) {
@@ -214,34 +219,47 @@ function atualizarResumo(ss) {
     ag.porItem.map(function (i) { return [i.item, i.secao, i.pergunta, i.total, i.pctNC, i.pctRess]; }), [5, 6], HEADBG);
   r = infoItem.next;
 
-  var gRow = r + 2;
-  if (infoSec.dataRows > 0) {
-    inserirGraficoBarra(sh, 'N\u00e3o conformidade por \u00e1rea (% com ressalva)',
-      sh.getRange(infoSec.dataStart, 1, infoSec.dataRows, 1),
-      sh.getRange(infoSec.dataStart, 4, infoSec.dataRows, 1), gRow, 1);
+  // Dados auxiliares dos gr\u00e1ficos: 2 colunas cont\u00edguas (categoria + valor) numa \u00e1rea \u00e0 direita (col P)
+  var HCOL = 16;
+  var dSec = ag.porSecao.map(function (s) { return [s.secao, s.pctRess]; });
+  sh.getRange(1, HCOL, 1, 2).setValues([['\u00c1rea', '% com ressalva']]);
+  if (dSec.length) {
+    sh.getRange(2, HCOL, dSec.length, 2).setValues(dSec);
+    sh.getRange(2, HCOL + 1, dSec.length, 1).setNumberFormat('0%');
   }
-  if (infoItem.dataRows > 0) {
-    var topN = Math.min(infoItem.dataRows, 10);
-    inserirGraficoBarra(sh, 'Itens que mais reprovam (top ' + topN + ', % com ressalva)',
-      sh.getRange(infoItem.dataStart, 1, topN, 1),
-      sh.getRange(infoItem.dataStart, 6, topN, 1), gRow + 18, 1);
+  var dItem = ag.porItem.slice(0, 12).map(function (i) { return [i.item + ' \u00b7 ' + i.secao, i.pctRess]; });
+  var ir = 2 + dSec.length + 2;
+  sh.getRange(ir, HCOL, 1, 2).setValues([['Item', '% com ressalva']]);
+  if (dItem.length) {
+    sh.getRange(ir + 1, HCOL, dItem.length, 2).setValues(dItem);
+    sh.getRange(ir + 1, HCOL + 1, dItem.length, 1).setNumberFormat('0%');
+  }
+  sh.hideColumns(HCOL, 3);
+
+  // Gr\u00e1ficos no topo \u00e0 direita (vis\u00edveis sem rolar)
+  if (dSec.length) {
+    inserirGraficoBarra(sh, 'N\u00e3o conformidade por \u00e1rea',
+      sh.getRange(1, HCOL, dSec.length + 1, 2), 4, 8);
+  }
+  if (dItem.length) {
+    inserirGraficoBarra(sh, 'Itens que mais reprovam (top ' + dItem.length + ')',
+      sh.getRange(ir, HCOL, dItem.length + 1, 2), 22, 8);
   }
 
   ss.setActiveSheet(sh); ss.moveActiveSheet(1);
 }
 
-function inserirGraficoBarra(sh, titulo, catRange, valRange, anchorRow, anchorCol) {
+function inserirGraficoBarra(sh, titulo, range, anchorRow, anchorCol) {
   var chart = sh.newChart()
+    .addRange(range)
     .setChartType(Charts.ChartType.BAR)
-    .addRange(catRange)
-    .addRange(valRange)
-    .setNumHeaders(0)
+    .setNumHeaders(1)
     .setOption('title', titulo)
     .setOption('legend', { position: 'none' })
     .setOption('hAxis', { format: 'percent', viewWindow: { min: 0 } })
     .setOption('colors', ['#0043D8'])
-    .setOption('height', 300)
-    .setOption('width', 560)
+    .setOption('height', 280)
+    .setOption('width', 520)
     .setPosition(anchorRow, anchorCol, 0, 0)
     .build();
   sh.insertChart(chart);
