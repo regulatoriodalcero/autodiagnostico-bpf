@@ -277,9 +277,9 @@ function escreverSecaoResumo(sh, r, titulo, cab, linhas, pctCols, HEADBG) {
     var col = pctCols[pctCols.length - 1];
     var rng = sh.getRange(r, col, linhas.length, 1);
     var rule = SpreadsheetApp.newConditionalFormatRule()
-      .setGradientMinpointWithValue('#10b981', SpreadsheetApp.InterpolationPointType.NUMBER, '0')
-      .setGradientMidpointWithValue('#f59e0b', SpreadsheetApp.InterpolationPointType.NUMBER, '0.5')
-      .setGradientMaxpointWithValue('#ef4444', SpreadsheetApp.InterpolationPointType.NUMBER, '1')
+      .setGradientMinpointWithValue('#10b981', SpreadsheetApp.InterpolationType.NUMBER, '0')
+      .setGradientMidpointWithValue('#f59e0b', SpreadsheetApp.InterpolationType.NUMBER, '0.5')
+      .setGradientMaxpointWithValue('#ef4444', SpreadsheetApp.InterpolationType.NUMBER, '1')
       .setRanges([rng]).build();
     var rules = sh.getConditionalFormatRules(); rules.push(rule); sh.setConditionalFormatRules(rules);
     r += linhas.length;
