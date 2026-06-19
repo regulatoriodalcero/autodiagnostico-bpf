@@ -362,8 +362,8 @@ function corpoEmailInterno(d) {
         linha('Score', d.score + ' (' + d.classificacao + ')') +
         linha('Riscos O/RR', String(d.riscos.length)) + linha('Perfil', d.perfil) +
       '</table>' +
-      '<p style="font-size:12px;color:#6b7280;">Relat\u00f3rio completo enviado \u00e0 pessoa. Demais dados na planilha (abas Diagnosticos, Respostas, Marketing e Resumo).</p>' +
     '</div>' +
+    montarRelatorioHtml(d) +
   '</div>';
 }
 function linha(rotulo, valor) {
