@@ -17,7 +17,7 @@
  */
 
 var SHEET_ID = '1cxBFUQ1Vf50orfc86f11S50v2I3-Gww-3kIEzIwG0ic';
-var EMAILS_INTERNOS = ['comercial@dalceroconsultoria.com.br', 'regulatorio@dalceroconsultoria.com.br'];
+var EMAILS_INTERNOS = ['regulatorio@dalceroconsultoria.com.br']; // recebe automaticamente os dados
 var REMETENTE_NOME = 'Dal Cero Consultoria';
 
 var COR = {
@@ -103,6 +103,13 @@ function gravarNaPlanilha(d, id) {
       return [id, d.data, d.empresa, r.id, r.secao, r.tipo, r.conformidade, r.pergunta];
     });
     aResp.getRange(aResp.getLastRow() + 1, 1, linhas.length, linhas[0].length).setValues(linhas);
+  }
+
+  // Aba "Marketing": s\u00f3 quem aceitou receber comunica\u00e7\u00e3o (lista para o comercial abordar)
+  if (d.marketing === 'sim') {
+    var aMkt = getOrCreateSheet(ss, 'Marketing',
+      ['Data', 'Empresa', 'Respons\u00e1vel', 'E-mail', 'Registro MAPA', 'Score', 'Classifica\u00e7\u00e3o', 'Contato comercial']);
+    aMkt.appendRow([d.data, d.empresa, d.nome, d.email, d.registro, Number(d.score), d.classificacao, '']);
   }
 
   // Recalcula o dashboard (um erro aqui n\u00e3o impede a grava\u00e7\u00e3o dos dados)
@@ -355,8 +362,8 @@ function corpoEmailInterno(d) {
         linha('Score', d.score + ' (' + d.classificacao + ')') +
         linha('Riscos O/RR', String(d.riscos.length)) + linha('Perfil', d.perfil) +
       '</table>' +
+      '<p style="font-size:12px;color:#6b7280;">Relat\u00f3rio completo enviado \u00e0 pessoa. Demais dados na planilha (abas Diagnosticos, Respostas, Marketing e Resumo).</p>' +
     '</div>' +
-    montarRelatorioHtml(d) +
   '</div>';
 }
 function linha(rotulo, valor) {
