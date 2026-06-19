@@ -22,7 +22,7 @@
  */
 
 // >>> Quem recebe a C\u00d3PIA interna de cada autodiagn\u00f3stico (al\u00e9m da pr\u00f3pria pessoa)
-var EMAILS_INTERNOS = ['comercial@dalceroconsultoria.com.br'];
+var EMAILS_INTERNOS = ['comercial@dalceroconsultoria.com.br', 'regulatorio@dalceroconsultoria.com.br'];
 // Para incluir o regulat\u00f3rio, use:
 // var EMAILS_INTERNOS = ['comercial@dalceroconsultoria.com.br', 'regulatorio@dalceroconsultoria.com.br'];
 
