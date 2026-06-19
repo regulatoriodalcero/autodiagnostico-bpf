@@ -179,6 +179,7 @@ function atualizarResumo(ss) {
 
   var sh = ss.getSheetByName('Resumo');
   if (!sh) sh = ss.insertSheet('Resumo');
+  sh.getCharts().forEach(function (ch) { sh.removeChart(ch); });
   sh.clear();
   sh.clearConditionalFormatRules();
   sh.getRange(1, 1, sh.getMaxRows(), Math.max(sh.getMaxColumns(), 6)).breakApart();
@@ -203,23 +204,56 @@ function atualizarResumo(ss) {
   }
   r += 3;
 
-  r = escreverSecaoResumo(sh, r, 'N\u00e3o conformidade por \u00e1rea',
+  var infoSec = escreverSecaoResumo(sh, r, 'N\u00e3o conformidade por \u00e1rea',
     ['Se\u00e7\u00e3o', 'Respostas', '% N\u00e3o conforme', '% Com ressalva'],
     ag.porSecao.map(function (s) { return [s.secao, s.total, s.pctNC, s.pctRess]; }), [3, 4], HEADBG);
-  r += 1;
+  r = infoSec.next + 1;
 
-  escreverSecaoResumo(sh, r, 'Itens que mais reprovam (ranking)',
+  var infoItem = escreverSecaoResumo(sh, r, 'Itens que mais reprovam (ranking)',
     ['Item', 'Se\u00e7\u00e3o', 'Pergunta', 'Respostas', '% N\u00e3o conforme', '% Com ressalva'],
     ag.porItem.map(function (i) { return [i.item, i.secao, i.pergunta, i.total, i.pctNC, i.pctRess]; }), [5, 6], HEADBG);
+  r = infoItem.next;
+
+  var gRow = r + 2;
+  if (infoSec.dataRows > 0) {
+    inserirGraficoBarra(sh, 'N\u00e3o conformidade por \u00e1rea (% com ressalva)',
+      sh.getRange(infoSec.dataStart, 1, infoSec.dataRows, 1),
+      sh.getRange(infoSec.dataStart, 4, infoSec.dataRows, 1), gRow, 1);
+  }
+  if (infoItem.dataRows > 0) {
+    var topN = Math.min(infoItem.dataRows, 10);
+    inserirGraficoBarra(sh, 'Itens que mais reprovam (top ' + topN + ', % com ressalva)',
+      sh.getRange(infoItem.dataStart, 1, topN, 1),
+      sh.getRange(infoItem.dataStart, 6, topN, 1), gRow + 18, 1);
+  }
 
   ss.setActiveSheet(sh); ss.moveActiveSheet(1);
+}
+
+function inserirGraficoBarra(sh, titulo, catRange, valRange, anchorRow, anchorCol) {
+  var chart = sh.newChart()
+    .setChartType(Charts.ChartType.BAR)
+    .addRange(catRange)
+    .addRange(valRange)
+    .setNumHeaders(0)
+    .setOption('title', titulo)
+    .setOption('legend', { position: 'none' })
+    .setOption('hAxis', { format: 'percent', viewWindow: { min: 0 } })
+    .setOption('colors', ['#0043D8'])
+    .setOption('height', 300)
+    .setOption('width', 560)
+    .setPosition(anchorRow, anchorCol, 0, 0)
+    .build();
+  sh.insertChart(chart);
 }
 
 function escreverSecaoResumo(sh, r, titulo, cab, linhas, pctCols, HEADBG) {
   var n = cab.length;
   sh.getRange(r, 1, 1, n).merge().setValue(titulo).setFontColor('#041F47').setFontSize(13).setFontWeight('bold'); r++;
   sh.getRange(r, 1, 1, n).setValues([cab]).setBackground(HEADBG).setFontColor('#ffffff').setFontWeight('bold').setFontSize(11); r++;
+  var dataStart = r, dataRows = 0;
   if (linhas.length) {
+    dataRows = linhas.length;
     sh.getRange(r, 1, linhas.length, n).setValues(linhas);
     pctCols.forEach(function (pc) { sh.getRange(r, pc, linhas.length, 1).setNumberFormat('0%'); });
     var col = pctCols[pctCols.length - 1];
@@ -232,7 +266,7 @@ function escreverSecaoResumo(sh, r, titulo, cab, linhas, pctCols, HEADBG) {
     var rules = sh.getConditionalFormatRules(); rules.push(rule); sh.setConditionalFormatRules(rules);
     r += linhas.length;
   }
-  return r;
+  return { next: r, dataStart: dataStart, dataRows: dataRows };
 }
 
 /* ---------- Cores ---------- */
