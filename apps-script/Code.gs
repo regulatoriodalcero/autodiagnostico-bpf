@@ -182,38 +182,72 @@ function montarRelatorioHtml(d) {
     }).join('');
   }
 
+  var cartao = '' +
+    '<div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">' +
+      '<div style="background:' + COR.navy + ';color:#fff;padding:18px 24px;">' +
+        '<div style="font-size:11px;letter-spacing:2px;color:' + COR.dourado + ';text-transform:uppercase;">Dal Cero Consultoria \u00b7 Regulat\u00f3rio MAPA</div>' +
+        '<div style="font-size:18px;font-weight:bold;margin-top:4px;">Autodiagn\u00f3stico Regulat\u00f3rio BPF / Autocontroles</div>' +
+      '</div>' +
+      '<div style="padding:20px 24px;">' +
+        '<table style="width:100%;font-size:12px;color:#374151;margin-bottom:16px;"><tr>' +
+          '<td><b>Empresa:</b> ' + esc(d.empresa) + '<br><b>Respons\u00e1vel:</b> ' + esc(d.nome) + '</td>' +
+          '<td style="text-align:right;"><b>Registro MAPA:</b> ' + esc(d.registro || '\u2014') + '<br><b>Data:</b> ' + esc(d.data) + '</td>' +
+        '</tr></table>' +
+
+        '<div style="background:' + COR.navy + ';border-radius:10px;padding:18px;text-align:center;color:#fff;margin-bottom:20px;">' +
+          '<div style="font-size:11px;letter-spacing:1.5px;opacity:.85;text-transform:uppercase;">Score de Conformidade BPF/Autocontroles</div>' +
+          '<div style="font-size:44px;font-weight:bold;line-height:1.1;">' + esc(d.score) + '</div>' +
+          '<div style="display:inline-block;margin-top:6px;padding:5px 16px;border-radius:16px;background:' + corClassificacao(d.classificacao) + ';color:#fff;font-weight:bold;font-size:13px;">' + esc(d.classificacao) + '</div>' +
+        '</div>' +
+
+        '<h3 style="color:' + COR.navy + ';font-size:15px;margin:0 0 8px;">Desempenho por \u00e1rea</h3>' +
+        '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;">' + linhasSecoes + '</table>' +
+
+        '<h3 style="color:' + COR.navy + ';font-size:15px;margin:0 0 8px;">Riscos regulat\u00f3rios identificados</h3>' +
+        '<div style="background:#fff7ed;border-left:4px solid ' + COR.dourado + ';border-radius:8px;padding:14px;">' + blocoRiscos + '</div>' +
+      '</div>' +
+    '</div>';
+
+  return '<div style="max-width:640px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;">' +
+    cartao +
+    montarRodapeHtml() +
+    '<p style="font-size:10px;color:' + COR.cinza + ';margin:16px 6px 0;line-height:1.5;text-align:center;">Esta \u00e9 uma autoavalia\u00e7\u00e3o indicativa, preenchida pelo pr\u00f3prio estabelecimento. O c\u00e1lculo oficial do Risco Regulat\u00f3rio \u00e9 realizado pelo servi\u00e7o de inspe\u00e7\u00e3o competente. Baseado no Termo de Fiscaliza\u00e7\u00e3o do MAPA (TF-BPF/Autocontroles e M\u00f3dulo II de Medicamentos).</p>' +
+    '<p style="font-size:11px;color:#9ca3af;margin:10px 6px 0;line-height:1.5;text-align:center;">Voc\u00ea est\u00e1 recebendo este e-mail porque preencheu o Autodiagn\u00f3stico Regulat\u00f3rio BPF no site da Dal Cero Consultoria.</p>' +
+  '</div>';
+}
+
+// Rodap\u00e9 no estilo da calculadora: painel azul com grade de contatos e barra de endere\u00e7o
+function montarRodapeHtml() {
   return '' +
-  '<div style="max-width:640px;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;">' +
-    '<div style="background:' + COR.navy + ';color:#fff;padding:18px 24px;">' +
-      '<div style="font-size:11px;letter-spacing:2px;color:' + COR.dourado + ';text-transform:uppercase;">Dal Cero Consultoria \u00b7 Regulat\u00f3rio MAPA</div>' +
-      '<div style="font-size:18px;font-weight:bold;margin-top:4px;">Autodiagn\u00f3stico Regulat\u00f3rio BPF / Autocontroles</div>' +
+  '<div style="background-color:' + COR.navy + ';background:linear-gradient(135deg,' + COR.navy + ' 0%,#003B91 60%,' + COR.azul + ' 100%);color:#fff;border-radius:14px;padding:28px 24px;margin-top:20px;">' +
+    '<span style="display:inline-block;background:rgba(255,255,255,0.12);border:1px solid rgba(232,180,97,0.45);color:' + COR.dourado + ';padding:6px 14px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;margin-bottom:14px;">Dal Cero Consultoria</span>' +
+    '<div style="font-size:22px;font-weight:800;line-height:1.25;margin-bottom:12px;">Identificou pontos de aten\u00e7\u00e3o? N\u00f3s temos a solu\u00e7\u00e3o.</div>' +
+    '<p style="font-size:14px;color:rgba(255,255,255,0.88);line-height:1.7;margin:0 0 22px;">A <strong style="color:#fff;">Dal Cero Consultoria</strong> \u00e9 especialista em regulat\u00f3rio MAPA para o setor de alimenta\u00e7\u00e3o animal \u2014 diagn\u00f3stico, adequa\u00e7\u00e3o de Boas Pr\u00e1ticas de Fabrica\u00e7\u00e3o, registros no SipeAgro, suporte em fiscaliza\u00e7\u00f5es e gest\u00e3o regulat\u00f3ria cont\u00ednua. <strong style="color:#fff;">Fale com nosso comercial e construa um plano personalizado.</strong></p>' +
+    '<table role="presentation" width="100%" style="border-collapse:collapse;margin-bottom:20px;">' +
+      '<tr><td colspan="2" style="padding:6px;">' +
+        cardContato('Time Comercial',
+          '<a style="color:#fff;text-decoration:none;" href="https://wa.me/5549999710329">(49) 99971-0329</a>&nbsp;&nbsp;\u00b7&nbsp;&nbsp;' +
+          '<a style="color:#fff;text-decoration:none;" href="https://wa.me/5549991993297">(49) 99199-3297</a>') +
+      '</td></tr>' +
+      '<tr>' +
+        '<td width="50%" style="padding:6px;">' + cardContato('E-mail Comercial', '<a style="color:#fff;text-decoration:none;" href="mailto:comercial@dalceroconsultoria.com.br">comercial@dalceroconsultoria.com.br</a>') + '</td>' +
+        '<td width="50%" style="padding:6px;">' + cardContato('Site', '<a style="color:#fff;text-decoration:none;" href="https://dalceroacademy.com">dalceroacademy.com</a>') + '</td>' +
+      '</tr>' +
+      '<tr>' +
+        '<td style="padding:6px;">' + cardContato('LinkedIn', '<a style="color:#fff;text-decoration:none;" href="https://www.linkedin.com/company/grupo-dal-cero/">/grupo-dal-cero</a>') + '</td>' +
+        '<td style="padding:6px;">' + cardContato('Instagram', '<a style="color:#fff;text-decoration:none;" href="https://www.instagram.com/grupodalcero/">@grupodalcero</a>') + '</td>' +
+      '</tr>' +
+    '</table>' +
+    '<div style="border-top:1px solid rgba(255,255,255,0.15);padding-top:16px;text-align:center;font-size:12.5px;color:rgba(255,255,255,0.72);line-height:1.6;">' +
+      '<strong style="color:#fff;display:block;margin-bottom:4px;letter-spacing:0.06em;">Dal Cero Consultoria</strong>' +
+      'Rua Prefeito Albino Cerutti Cella, 322, Sala 06 \u00b7 Centro \u00b7 Maravilha \u2014 SC' +
     '</div>' +
-    '<div style="padding:20px 24px;">' +
-      '<table style="width:100%;font-size:12px;color:#374151;margin-bottom:16px;"><tr>' +
-        '<td><b>Empresa:</b> ' + esc(d.empresa) + '<br><b>Respons\u00e1vel:</b> ' + esc(d.nome) + '</td>' +
-        '<td style="text-align:right;"><b>Registro MAPA:</b> ' + esc(d.registro || '\u2014') + '<br><b>Data:</b> ' + esc(d.data) + '</td>' +
-      '</tr></table>' +
-
-      '<div style="background:' + COR.navy + ';border-radius:10px;padding:18px;text-align:center;color:#fff;margin-bottom:20px;">' +
-        '<div style="font-size:11px;letter-spacing:1.5px;opacity:.85;text-transform:uppercase;">Score de Conformidade BPF/Autocontroles</div>' +
-        '<div style="font-size:44px;font-weight:bold;line-height:1.1;">' + esc(d.score) + '</div>' +
-        '<div style="display:inline-block;margin-top:6px;padding:5px 16px;border-radius:16px;background:' + corClassificacao(d.classificacao) + ';color:#fff;font-weight:bold;font-size:13px;">' + esc(d.classificacao) + '</div>' +
-      '</div>' +
-
-      '<h3 style="color:' + COR.navy + ';font-size:15px;margin:0 0 8px;">Desempenho por \u00e1rea</h3>' +
-      '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;">' + linhasSecoes + '</table>' +
-
-      '<h3 style="color:' + COR.navy + ';font-size:15px;margin:0 0 8px;">Riscos regulat\u00f3rios identificados</h3>' +
-      '<div style="background:#fff7ed;border-left:4px solid ' + COR.dourado + ';border-radius:8px;padding:14px;">' + blocoRiscos + '</div>' +
-
-      '<div style="margin-top:22px;background:' + COR.navy + ';color:#fff;border-radius:10px;padding:16px 20px;">' +
-        '<div style="font-size:14px;font-weight:bold;margin-bottom:4px;">Quer transformar este diagn\u00f3stico em um plano de a\u00e7\u00e3o?</div>' +
-        '<div style="font-size:12px;color:#dbe4f5;line-height:1.5;">A Dal Cero Consultoria \u00e9 especialista em regulat\u00f3rio MAPA para alimenta\u00e7\u00e3o animal \u2014 adequa\u00e7\u00e3o de BPF, registros no SipeAgro, suporte em fiscaliza\u00e7\u00f5es e gest\u00e3o cont\u00ednua.<br>' +
-        'WhatsApp: (49) 99971-0329 \u00b7 (49) 99199-3297 \u00b7 comercial@dalceroconsultoria.com.br \u00b7 dalceroacademy.com</div>' +
-      '</div>' +
-
-      '<p style="font-size:10px;color:' + COR.cinza + ';margin-top:16px;line-height:1.5;">Esta \u00e9 uma autoavalia\u00e7\u00e3o indicativa, preenchida pelo pr\u00f3prio estabelecimento. O c\u00e1lculo oficial do Risco Regulat\u00f3rio \u00e9 realizado pelo servi\u00e7o de inspe\u00e7\u00e3o competente. Baseado no Termo de Fiscaliza\u00e7\u00e3o do MAPA (TF-BPF/Autocontroles e M\u00f3dulo II de Medicamentos).</p>' +
-    '</div>' +
+  '</div>';
+}
+function cardContato(label, valor) {
+  return '<div style="background:rgba(255,255,255,0.06);padding:12px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.10);">' +
+    '<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:' + COR.dourado + ';margin-bottom:4px;">' + label + '</div>' +
+    '<div style="font-size:14px;color:#fff;word-break:break-word;">' + valor + '</div>' +
   '</div>';
 }
 
@@ -221,21 +255,21 @@ function montarRelatorioHtml(d) {
 function corpoEmailLead(d) {
   var primeiro = (d.nome || '').split(' ')[0] || 'Ol\u00e1';
   return '<div style="font-family:Arial,sans-serif;color:#1f2937;font-size:14px;line-height:1.6;">' +
-    '<p>' + esc(primeiro) + ', tudo bem? Segue abaixo o resultado do seu <b>Autodiagn\u00f3stico Regulat\u00f3rio BPF/Autocontroles</b>.</p>' +
+    '<p style="max-width:640px;margin:0 auto 14px;">' + esc(primeiro) + ', tudo bem? Segue abaixo o resultado do seu <b>Autodiagn\u00f3stico Regulat\u00f3rio BPF/Autocontroles</b>.</p>' +
     montarRelatorioHtml(d) +
-    '<p style="margin-top:16px;">Quer ajuda para tratar esses pontos? Fale com a gente pelo WhatsApp (49) 99971-0329 / (49) 99199-3297 ou por comercial@dalceroconsultoria.com.br.</p>' +
-    '<p style="color:#6b7280;font-size:12px;">Dal Cero Consultoria \u00b7 Regulat\u00f3rio MAPA \u00b7 Alimenta\u00e7\u00e3o Animal</p>' +
   '</div>';
 }
 function corpoEmailInterno(d) {
   return '<div style="font-family:Arial,sans-serif;color:#1f2937;font-size:14px;line-height:1.6;">' +
-    '<p><b>Novo autodiagn\u00f3stico preenchido.</b></p>' +
-    '<table style="font-size:13px;margin-bottom:16px;">' +
-      linha('Empresa', d.empresa) + linha('Respons\u00e1vel', d.nome) + linha('E-mail', d.email) +
-      linha('Registro MAPA', d.registro || '\u2014') + linha('Data', d.data) +
-      linha('Score', d.score + ' (' + d.classificacao + ')') +
-      linha('Riscos O/RR', String(d.riscos.length)) + linha('Perfil', d.perfil) +
-    '</table>' +
+    '<div style="max-width:640px;margin:0 auto;">' +
+      '<p><b>Novo autodiagn\u00f3stico preenchido.</b></p>' +
+      '<table style="font-size:13px;margin-bottom:16px;">' +
+        linha('Empresa', d.empresa) + linha('Respons\u00e1vel', d.nome) + linha('E-mail', d.email) +
+        linha('Registro MAPA', d.registro || '\u2014') + linha('Data', d.data) +
+        linha('Score', d.score + ' (' + d.classificacao + ')') +
+        linha('Riscos O/RR', String(d.riscos.length)) + linha('Perfil', d.perfil) +
+      '</table>' +
+    '</div>' +
     montarRelatorioHtml(d) +
   '</div>';
 }
