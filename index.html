@@ -1810,7 +1810,30 @@ function finalizarQuiz() {
     });
   }
 
-  // Guarda o resultado para envio por e-mail
+  // Todas as respostas, já convertidas para CONFORMIDADE (considerando as pegadinhas)
+  const todasRespostas = [];
+  state.itensAtivos.forEach(item => {
+    subsAtivas(item).forEach(sub => {
+      const r = state.respostas[sub.id];
+      if (r === undefined) return;
+      let conformidade;
+      if (r === null) {
+        conformidade = 'N/A';
+      } else {
+        const conf = sub.invertida ? 100 - r : r;
+        conformidade = conf === 100 ? 'Conforme' : (conf === 50 ? 'Parcial' : 'Não conforme');
+      }
+      todasRespostas.push({
+        id: sub.id,
+        secao: SECTIONS[item.secao].nome,
+        tipo: [sub.obrigatorio ? 'O' : null, sub.rr ? 'RR' : null].filter(Boolean).join('+') || '—',
+        conformidade,
+        pergunta: sub.pergunta
+      });
+    });
+  });
+
+  // Guarda o resultado para envio por e-mail e base de dados
   ultimoResultado = {
     geral,
     classificacao: cls.nome,
@@ -1822,6 +1845,7 @@ function finalizarQuiz() {
       tipo: [r.sub.obrigatorio ? 'O' : null, r.sub.rr ? 'RR' : null].filter(Boolean).join('+'),
       pergunta: r.sub.pergunta
     })),
+    respostas: todasRespostas,
     perfil: montarPerfil()
   };
 
@@ -1896,6 +1920,7 @@ function enviarRelatorio() {
   fd.append('classificacao', ultimoResultado.classificacao);
   fd.append('secoes_json', JSON.stringify(ultimoResultado.secoes));
   fd.append('riscos_json', JSON.stringify(ultimoResultado.riscos));
+  fd.append('respostas_json', JSON.stringify(ultimoResultado.respostas));
   fd.append('perfil', ultimoResultado.perfil);
 
   fetch(APPS_SCRIPT_URL, { method: 'POST', body: fd, mode: 'no-cors' })

@@ -1,30 +1,28 @@
 /**
  * ============================================================================
  *  AUTODIAGN\u00d3STICO REGULAT\u00d3RIO BPF \u2014 Dal Cero Consultoria
- *  Backend de e-mail (Google Apps Script Web App)
+ *  Backend (Google Apps Script Web App): e-mail com PDF + base de dados
  *
- *  O app (p\u00e1gina) envia os dados via POST (FormData). Este script monta um
- *  relat\u00f3rio em PDF e envia por e-mail para a pessoa e para o time comercial.
+ *  A cada preenchimento, este script:
+ *    1) gera um relat\u00f3rio em PDF e envia por e-mail para a pessoa e para o time;
+ *    2) grava os dados em uma Planilha Google (abas "Diagnosticos" e "Respostas").
  *
- *  COMO PUBLICAR (uma vez):
- *   1. Acesse https://script.google.com  \u2192 Novo projeto.
- *   2. Apague o conte\u00fado padr\u00e3o e cole TODO este arquivo.
- *   3. (Opcional) Ajuste EMAILS_INTERNOS abaixo.
- *   4. Implantar \u2192 Nova implanta\u00e7\u00e3o \u2192 Tipo: "App da Web".
- *        - Executar como: Eu (sua conta Google)
- *        - Quem pode acessar: Qualquer pessoa
- *   5. Autorize as permiss\u00f5es quando pedir.
- *   6. Copie a URL que termina em /exec e cole na constante
- *      APPS_SCRIPT_URL do index.html do autodiagn\u00f3stico.
- *
- *  Para testar sem o site: rode a fun\u00e7\u00e3o testarEnvio() uma vez.
+ *  PUBLICA\u00c7\u00c3O (uma vez):
+ *    - script.google.com -> novo projeto -> cole este arquivo.
+ *    - Confira SHEET_ID e EMAILS_INTERNOS abaixo.
+ *    - Rode testarEnvio() uma vez (autoriza e-mail + planilha) e confira.
+ *    - Implantar -> Nova implanta\u00e7\u00e3o -> App da Web
+ *        Executar como: Eu | Quem pode acessar: Qualquer pessoa.
+ *    - Para ATUALIZAR uma implanta\u00e7\u00e3o existente sem trocar a URL:
+ *        Implantar -> Gerenciar implanta\u00e7\u00f5es -> editar (l\u00e1pis) -> Vers\u00e3o: Nova vers\u00e3o.
  * ============================================================================
  */
 
-// >>> Quem recebe a C\u00d3PIA interna de cada autodiagn\u00f3stico (al\u00e9m da pr\u00f3pria pessoa)
+// ID da Planilha Google que vai guardar a base de dados (parte entre /d/ e /edit da URL)
+var SHEET_ID = '1cxBFUQ1Vf50orfc86f11S50v2I3-Gww-3kIEzIwG0ic';
+
+// Quem recebe a c\u00f3pia interna de cada autodiagn\u00f3stico (al\u00e9m da pr\u00f3pria pessoa)
 var EMAILS_INTERNOS = ['comercial@dalceroconsultoria.com.br', 'regulatorio@dalceroconsultoria.com.br'];
-// Para incluir o regulat\u00f3rio, use:
-// var EMAILS_INTERNOS = ['comercial@dalceroconsultoria.com.br', 'regulatorio@dalceroconsultoria.com.br'];
 
 var REMETENTE_NOME = 'Dal Cero Consultoria';
 
@@ -35,15 +33,27 @@ var COR = {
 };
 
 function doPost(e) {
+  var resultado = { ok: true, etapas: {} };
+  var p = (e && e.parameter) ? e.parameter : {};
+  var dados = lerDados(p);
+  var id = String(Date.now());
+
+  // 1) Grava na planilha (n\u00e3o deixa um erro aqui impedir o e-mail)
   try {
-    var p = (e && e.parameter) ? e.parameter : {};
-    var dados = lerDados(p);
+    gravarNaPlanilha(dados, id);
+    resultado.etapas.planilha = 'ok';
+  } catch (err) {
+    resultado.ok = false;
+    resultado.etapas.planilha = String(err);
+  }
+
+  // 2) E-mails com o PDF
+  try {
     var html = montarHtmlRelatorio(dados);
     var pdf = Utilities.newBlob(html, 'text/html', 'relatorio.html')
       .getAs('application/pdf')
       .setName('Autodiagnostico-BPF-' + sanitizar(dados.empresa) + '.pdf');
 
-    // 1) E-mail para a pessoa
     if (dados.email) {
       MailApp.sendEmail({
         to: dados.email,
@@ -53,8 +63,6 @@ function doPost(e) {
         attachments: [pdf]
       });
     }
-
-    // 2) C\u00f3pia interna (notifica\u00e7\u00e3o de lead) para o time comercial
     if (EMAILS_INTERNOS && EMAILS_INTERNOS.length) {
       MailApp.sendEmail({
         to: EMAILS_INTERNOS.join(','),
@@ -64,39 +72,81 @@ function doPost(e) {
         attachments: [pdf]
       });
     }
-
-    return ContentService.createTextOutput(JSON.stringify({ ok: true }))
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ ok: false, erro: String(err) }))
-      .setMimeType(ContentService.MimeType.JSON);
+    resultado.etapas.email = 'ok';
+  } catch (err2) {
+    resultado.ok = false;
+    resultado.etapas.email = String(err2);
   }
+
+  return ContentService.createTextOutput(JSON.stringify(resultado))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
-// Permite abrir a URL no navegador s\u00f3 para confirmar que est\u00e1 publicada
 function doGet() {
-  return ContentService.createTextOutput('Autodiagn\u00f3stico BPF \u2014 endpoint de e-mail ativo.');
+  return ContentService.createTextOutput('Autodiagn\u00f3stico BPF \u2014 endpoint ativo (e-mail + base de dados).');
 }
 
 /* ---------- Leitura e normaliza\u00e7\u00e3o dos dados recebidos ---------- */
 function lerDados(p) {
-  var secoes = [], riscos = [];
+  var secoes = [], riscos = [], respostas = [];
   try { secoes = JSON.parse(p.secoes_json || '[]'); } catch (e) {}
   try { riscos = JSON.parse(p.riscos_json || '[]'); } catch (e) {}
+  try { respostas = JSON.parse(p.respostas_json || '[]'); } catch (e) {}
   return {
     nome: p.nome || '',
     empresa: p.empresa || '(empresa n\u00e3o informada)',
     email: p.email || '',
     registro: p.registro || '',
+    marketing: p.marketing || 'nao',
+    dataISO: p.data || '',
     data: formatarData(p.data),
     score: p.score_geral || '0',
     classificacao: p.classificacao || '',
     perfil: p.perfil || '',
     secoes: secoes,
-    riscos: riscos
+    riscos: riscos,
+    respostas: respostas
   };
 }
 
+/* ---------- Grava\u00e7\u00e3o na Planilha Google (base de dados) ---------- */
+function gravarNaPlanilha(d, id) {
+  if (!SHEET_ID || SHEET_ID.indexOf('COLE_AQUI') === 0) return; // sem planilha configurada
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+
+  // Aba "Diagnosticos": 1 linha por preenchimento
+  var aDiag = getOrCreateSheet(ss, 'Diagnosticos',
+    ['ID', 'Data', 'Empresa', 'Respons\u00e1vel', 'E-mail', 'Registro MAPA',
+     'Score', 'Classifica\u00e7\u00e3o', 'Qtd. riscos O/RR', 'Aceita marketing', 'Perfil']);
+  aDiag.appendRow([
+    id, d.data, d.empresa, d.nome, d.email, d.registro,
+    Number(d.score), d.classificacao, d.riscos.length,
+    (d.marketing === 'sim' ? 'Sim' : 'N\u00e3o'), d.perfil
+  ]);
+
+  // Aba "Respostas": 1 linha por pergunta respondida (base p/ \u00edndice de n\u00e3o conformidade)
+  var aResp = getOrCreateSheet(ss, 'Respostas',
+    ['ID', 'Data', 'Empresa', 'Item', 'Se\u00e7\u00e3o', 'Tipo', 'Conformidade', 'Pergunta']);
+  if (d.respostas && d.respostas.length) {
+    var linhas = d.respostas.map(function (r) {
+      return [id, d.data, d.empresa, r.id, r.secao, r.tipo, r.conformidade, r.pergunta];
+    });
+    aResp.getRange(aResp.getLastRow() + 1, 1, linhas.length, linhas[0].length).setValues(linhas);
+  }
+}
+
+function getOrCreateSheet(ss, nome, cabecalho) {
+  var sh = ss.getSheetByName(nome);
+  if (!sh) {
+    sh = ss.insertSheet(nome);
+    sh.appendRow(cabecalho);
+    sh.getRange(1, 1, 1, cabecalho.length).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+/* ---------- Cores ---------- */
 function corClassificacao(nome) {
   if (/baixo/i.test(nome)) return COR.verde;
   if (/m\u00e9dio|medio/i.test(nome)) return COR.amarelo;
@@ -196,7 +246,7 @@ function corpoEmailInterno(d) {
       linha('Score', d.score + ' (' + d.classificacao + ')') +
       linha('Riscos O/RR', String(d.riscos.length)) + linha('Perfil', d.perfil) +
     '</table>' +
-    '<p style="color:#6b7280;font-size:12px;">Relat\u00f3rio completo em anexo (PDF).</p>' +
+    '<p style="color:#6b7280;font-size:12px;">Relat\u00f3rio completo em anexo (PDF). Dados gravados na planilha da base.</p>' +
   '</div>';
 }
 function linha(rotulo, valor) {
@@ -221,10 +271,14 @@ function formatarData(iso) {
 function testarEnvio() {
   doPost({ parameter: {
     nome: 'Teste Dal Cero', empresa: 'F\u00e1brica Exemplo', email: Session.getActiveUser().getEmail(),
-    registro: 'SC-00/0000', data: new Date().toISOString(),
+    registro: 'SC-00/0000', marketing: 'sim', data: new Date().toISOString(),
     score_geral: '72', classificacao: 'Risco M\u00e9dio',
-    perfil: 'Fabrica medicamentos: N\u00e3o | Controle de pragas: Terceirizado',
-    secoes_json: JSON.stringify([{ nome: 'Documenta\u00e7\u00e3o e Registro', pct: 80 }, { nome: '\u00c1rea Externa', pct: 50 }, { nome: 'Treinamentos', pct: 100 }]),
-    riscos_json: JSON.stringify([{ id: '21', secao: 'Qualifica\u00e7\u00e3o de Fornecedores', status: 'N\u00e3o conforme', tipo: 'O+RR', pergunta: 'Lote vencido esquecido no estoque?' }])
+    perfil: 'Aceita marketing: Sim | Fabrica medicamentos: N\u00e3o',
+    secoes_json: JSON.stringify([{ nome: 'Documenta\u00e7\u00e3o e Registro', pct: 80 }, { nome: '\u00c1rea Externa', pct: 50 }]),
+    riscos_json: JSON.stringify([{ id: '21', secao: 'Qualifica\u00e7\u00e3o de Fornecedores', status: 'N\u00e3o conforme', tipo: 'O+RR', pergunta: 'Lote vencido esquecido no estoque?' }]),
+    respostas_json: JSON.stringify([
+      { id: '1', secao: 'Documenta\u00e7\u00e3o e Registro', tipo: '\u2014', conformidade: 'Conforme', pergunta: 'Pergunta 1' },
+      { id: '21', secao: 'Qualifica\u00e7\u00e3o de Fornecedores', tipo: 'O+RR', conformidade: 'N\u00e3o conforme', pergunta: 'Lote vencido esquecido no estoque?' }
+    ])
   }});
 }
