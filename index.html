@@ -531,6 +531,15 @@
 
   .result-actions { margin-top: 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
+  /* ---------- ENVIO DE RELATÓRIO POR E-MAIL ---------- */
+  .email-report { margin-top: 26px; padding: 20px; background: #eef4ff; border: 1.5px solid var(--azul-claro); border-radius: 12px; text-align: center; }
+  .email-report h3 { color: var(--navy); margin-bottom: 6px; }
+  .email-report p { font-size: 13px; color: var(--texto); margin-bottom: 14px; }
+  .email-status { margin-top: 14px; font-size: 13px; padding: 10px 12px; border-radius: 8px; line-height: 1.45; }
+  .email-status.enviando { background: #fff7ed; color: var(--marrom); }
+  .email-status.sucesso { background: #ecfdf5; color: #065f46; }
+  .email-status.erro { background: #fef2f2; color: #991b1b; }
+
   footer {
     text-align: center;
     padding: 24px 16px;
@@ -561,7 +570,7 @@
   /* ---------- PRINT ---------- */
   @media print {
     body { background: var(--branco); }
-    header, footer, .result-actions, #cta-final { display: none !important; }
+    header, footer, .result-actions, #cta-final, .email-report { display: none !important; }
     .card { box-shadow: none; padding: 0; }
     .screen { display: block !important; }
     #screen-welcome, #screen-lead, #screen-quiz, .filter-screen { display: none !important; }
@@ -844,6 +853,13 @@
           <h3>Riscos regulatórios identificados</h3>
           <div class="sub">Pontos da sua operação onde foram identificados itens obrigatórios (O) ou de Risco Regulatório (RR) não conformes ou parcialmente conformes.</div>
           <div id="risks-list"></div>
+        </div>
+
+        <div id="email-report" class="email-report">
+          <h3>📄 Receba o relatório completo por e-mail</h3>
+          <p>Enviaremos o PDF do seu autodiagnóstico para <b id="email-dest">—</b>.</p>
+          <button class="btn btn-gold" id="btn-enviar-relatorio" onclick="enviarRelatorio()">Enviar relatório por e-mail</button>
+          <div id="email-status" class="email-status" style="display: none;"></div>
         </div>
 
         <div id="cta-final">
@@ -1335,6 +1351,16 @@ const OPCOES = [
 ];
 
 /* ==============================================================================
+   INTEGRAÇÃO DE E-MAIL (Google Apps Script)
+   Cole abaixo a URL /exec do Web App publicado no Apps Script.
+   Enquanto estiver "COLE_AQUI...", o botão mostra mensagem de configuração pendente.
+   ============================================================================== */
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwWqO4dTwsbvPdKZgpOc3upvKdCsvLECSVaIHKDBQ8kgzqrXexpx6aGKrzAb710woYD/exec";
+
+// Guarda o último resultado calculado para montar o e-mail
+let ultimoResultado = null;
+
+/* ==============================================================================
    STATE
    ============================================================================== */
 let state = {
@@ -1775,7 +1801,102 @@ function finalizarQuiz() {
     });
   }
 
+  // Guarda o resultado para envio por e-mail
+  ultimoResultado = {
+    geral,
+    classificacao: cls.nome,
+    secoes: Object.keys(SECTIONS).filter(s => pcts[s] !== null).map(s => ({ nome: SECTIONS[s].nome, pct: pcts[s] })),
+    riscos: riscos.map(r => ({
+      id: r.sub.id,
+      secao: SECTIONS[r.item.secao].nome,
+      status: r.valor === 50 ? 'Parcial' : 'Não conforme',
+      tipo: [r.sub.obrigatorio ? 'O' : null, r.sub.rr ? 'RR' : null].filter(Boolean).join('+'),
+      pergunta: r.sub.pergunta
+    })),
+    perfil: montarPerfil()
+  };
+
+  // Prepara o bloco de envio por e-mail
+  const dest = document.getElementById('email-dest');
+  if (dest) dest.textContent = state.lead.email || '—';
+  const est = document.getElementById('email-status');
+  if (est) { est.style.display = 'none'; est.textContent = ''; est.className = 'email-status'; }
+  const btnEnv = document.getElementById('btn-enviar-relatorio');
+  if (btnEnv) { btnEnv.disabled = false; btnEnv.textContent = 'Enviar relatório por e-mail'; }
+
   goTo('results');
+}
+
+// Resumo do perfil da empresa (filtros escolhidos) — útil para o time comercial
+function montarPerfil() {
+  const f = state.filtros, l = state.lead, p = [];
+  p.push('Fabrica medicamentos: ' + (l.medicamento === 'sim' ? 'Sim' : 'Não'));
+  if (f.pragasTipo) p.push('Controle de pragas: ' + (f.pragasTipo === 'proprio' ? 'Próprio' : 'Terceirizado'));
+  if (f.medidasPreventivas) {
+    const m = [];
+    if (f.medidasPreventivas.sequenciamento) m.push('sequenciamento');
+    if (f.medidasPreventivas.flushing) m.push('flushing');
+    p.push('Medidas anticontaminação: ' + (m.join(', ') || 'nenhuma'));
+  }
+  if (f.agua) {
+    const a = [];
+    if (f.agua.reservatorio) a.push('reservatório');
+    if (f.agua.ingrediente) a.push('água como ingrediente');
+    a.push(f.agua.redePublica ? 'rede pública' : 'captação própria');
+    p.push('Água: ' + a.join(', '));
+  }
+  if (l.medicamento === 'sim') {
+    p.push('Respondeu módulo de medicamentos: ' + (f.querMed ? 'Sim' : 'Não'));
+    if (f.medCategoria) {
+      const c = [];
+      if (f.medCategoria.produtorRural) c.push('produtor rural');
+      if (f.medCategoria.prontoUso) c.push('pronto uso');
+      if (f.medCategoria.intermediario) c.push('intermediário');
+      p.push('Categoria: ' + (c.join(', ') || 'nenhuma'));
+    }
+  }
+  return p.join(' | ');
+}
+
+// Envia o relatório para o Apps Script (que gera o PDF e dispara os e-mails)
+function enviarRelatorio() {
+  const est = document.getElementById('email-status');
+  const btn = document.getElementById('btn-enviar-relatorio');
+  if (!ultimoResultado) return;
+  est.style.display = 'block';
+
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('COLE_AQUI') === 0) {
+    est.className = 'email-status erro';
+    est.innerHTML = 'O envio por e-mail ainda não foi configurado. Por enquanto, use "Imprimir / Salvar PDF" ou fale com <b>comercial@dalceroconsultoria.com.br</b>.';
+    return;
+  }
+
+  btn.disabled = true;
+  est.className = 'email-status enviando';
+  est.textContent = 'Enviando seu relatório…';
+
+  const fd = new FormData();
+  fd.append('nome', state.lead.nome || '');
+  fd.append('empresa', state.lead.empresa || '');
+  fd.append('email', state.lead.email || '');
+  fd.append('registro', state.lead.registro || '');
+  fd.append('data', state.lead.timestamp || '');
+  fd.append('score_geral', String(ultimoResultado.geral));
+  fd.append('classificacao', ultimoResultado.classificacao);
+  fd.append('secoes_json', JSON.stringify(ultimoResultado.secoes));
+  fd.append('riscos_json', JSON.stringify(ultimoResultado.riscos));
+  fd.append('perfil', ultimoResultado.perfil);
+
+  fetch(APPS_SCRIPT_URL, { method: 'POST', body: fd, mode: 'no-cors' })
+    .then(() => {
+      est.className = 'email-status sucesso';
+      est.innerHTML = 'Relatório enviado para <b>' + escapeHtml(state.lead.email) + '</b>. Verifique também a caixa de spam ou a aba de promoções.';
+    })
+    .catch(() => {
+      btn.disabled = false;
+      est.className = 'email-status erro';
+      est.innerHTML = 'Não conseguimos enviar agora. Tente novamente em instantes ou fale com <b>comercial@dalceroconsultoria.com.br</b>.';
+    });
 }
 
 /* ==============================================================================
