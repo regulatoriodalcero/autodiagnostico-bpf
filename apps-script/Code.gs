@@ -4,26 +4,22 @@
  *  Backend (Google Apps Script Web App): e-mail (relat\u00f3rio no CORPO) + base de dados
  *
  *  A cada preenchimento, este script:
- *    1) envia o relat\u00f3rio por e-mail, no CORPO do e-mail (HTML), para a pessoa
- *       e para o time comercial (sem anexo PDF);
- *    2) grava os dados em uma Planilha Google (abas "Diagnosticos" e "Respostas").
+ *    1) envia o relat\u00f3rio por e-mail, no CORPO (HTML), para a pessoa e para o time;
+ *    2) grava os dados na Planilha Google (abas "Diagnosticos" e "Respostas");
+ *    3) recalcula a aba "Resumo" (dashboard de n\u00e3o conformidades).
  *
- *  PUBLICA\u00c7\u00c3O / ATUALIZA\u00c7\u00c3O (a URL /exec n\u00e3o muda ao publicar nova vers\u00e3o):
- *    - script.google.com -> seu projeto -> cole este arquivo por cima.
- *    - Rode testarEnvio() uma vez (autoriza e-mail + planilha) e confira.
- *    - Implantar -> Gerenciar implanta\u00e7\u00f5es -> editar (l\u00e1pis) -> Vers\u00e3o: Nova vers\u00e3o.
+ *  Para REFAZER o resumo manualmente (ex.: depois de apagar linhas de teste):
+ *    abra o editor, selecione a fun\u00e7\u00e3o "atualizarResumo" e clique em Executar.
+ *
+ *  ATUALIZA\u00c7\u00c3O (a URL /exec n\u00e3o muda): cole este arquivo por cima ->
+ *    Implantar -> Gerenciar implanta\u00e7\u00f5es -> editar (l\u00e1pis) -> Vers\u00e3o: Nova vers\u00e3o.
  * ============================================================================
  */
 
-// ID da Planilha Google que vai guardar a base de dados (parte entre /d/ e /edit da URL)
 var SHEET_ID = '1cxBFUQ1Vf50orfc86f11S50v2I3-Gww-3kIEzIwG0ic';
-
-// Quem recebe a c\u00f3pia interna de cada autodiagn\u00f3stico (al\u00e9m da pr\u00f3pria pessoa)
 var EMAILS_INTERNOS = ['comercial@dalceroconsultoria.com.br', 'regulatorio@dalceroconsultoria.com.br'];
-
 var REMETENTE_NOME = 'Dal Cero Consultoria';
 
-// Paleta da marca
 var COR = {
   navy: '#041F47', azul: '#0043D8', azulClaro: '#177fe5', dourado: '#E8B461',
   cinza: '#6b7280', verde: '#10b981', amarelo: '#f59e0b', laranja: '#f97316', vermelho: '#ef4444'
@@ -35,7 +31,6 @@ function doPost(e) {
   var dados = lerDados(p);
   var id = String(Date.now());
 
-  // 1) Grava na planilha (um erro aqui n\u00e3o impede o e-mail)
   try {
     gravarNaPlanilha(dados, id);
     resultado.etapas.planilha = 'ok';
@@ -44,20 +39,17 @@ function doPost(e) {
     resultado.etapas.planilha = String(err);
   }
 
-  // 2) E-mails com o relat\u00f3rio NO CORPO (HTML), sem anexo
   try {
     if (dados.email) {
       MailApp.sendEmail({
-        to: dados.email,
-        name: REMETENTE_NOME,
+        to: dados.email, name: REMETENTE_NOME,
         subject: 'Seu relat\u00f3rio de Autodiagn\u00f3stico Regulat\u00f3rio BPF \u2014 Dal Cero',
         htmlBody: corpoEmailLead(dados)
       });
     }
     if (EMAILS_INTERNOS && EMAILS_INTERNOS.length) {
       MailApp.sendEmail({
-        to: EMAILS_INTERNOS.join(','),
-        name: REMETENTE_NOME,
+        to: EMAILS_INTERNOS.join(','), name: REMETENTE_NOME,
         subject: 'Novo autodiagn\u00f3stico: ' + dados.empresa + ' (score ' + dados.score + ')',
         htmlBody: corpoEmailInterno(dados)
       });
@@ -76,35 +68,25 @@ function doGet() {
   return ContentService.createTextOutput('Autodiagn\u00f3stico BPF \u2014 endpoint ativo (e-mail + base de dados).');
 }
 
-/* ---------- Leitura e normaliza\u00e7\u00e3o dos dados recebidos ---------- */
 function lerDados(p) {
   var secoes = [], riscos = [], respostas = [];
   try { secoes = JSON.parse(p.secoes_json || '[]'); } catch (e) {}
   try { riscos = JSON.parse(p.riscos_json || '[]'); } catch (e) {}
   try { respostas = JSON.parse(p.respostas_json || '[]'); } catch (e) {}
   return {
-    nome: p.nome || '',
-    empresa: p.empresa || '(empresa n\u00e3o informada)',
-    email: p.email || '',
-    registro: p.registro || '',
-    marketing: p.marketing || 'nao',
-    dataISO: p.data || '',
-    data: formatarData(p.data),
-    score: p.score_geral || '0',
-    classificacao: p.classificacao || '',
-    perfil: p.perfil || '',
-    secoes: secoes,
-    riscos: riscos,
-    respostas: respostas
+    nome: p.nome || '', empresa: p.empresa || '(empresa n\u00e3o informada)',
+    email: p.email || '', registro: p.registro || '', marketing: p.marketing || 'nao',
+    dataISO: p.data || '', data: formatarData(p.data),
+    score: p.score_geral || '0', classificacao: p.classificacao || '', perfil: p.perfil || '',
+    secoes: secoes, riscos: riscos, respostas: respostas
   };
 }
 
-/* ---------- Grava\u00e7\u00e3o na Planilha Google (base de dados) ---------- */
+/* ---------- Grava\u00e7\u00e3o na Planilha Google ---------- */
 function gravarNaPlanilha(d, id) {
-  if (!SHEET_ID || SHEET_ID.indexOf('COLE_AQUI') === 0) return; // sem planilha configurada
+  if (!SHEET_ID || SHEET_ID.indexOf('COLE_AQUI') === 0) return;
   var ss = SpreadsheetApp.openById(SHEET_ID);
 
-  // Aba "Diagnosticos": 1 linha por preenchimento
   var aDiag = getOrCreateSheet(ss, 'Diagnosticos',
     ['ID', 'Data', 'Empresa', 'Respons\u00e1vel', 'E-mail', 'Registro MAPA',
      'Score', 'Classifica\u00e7\u00e3o', 'Qtd. riscos O/RR', 'Aceita marketing', 'Perfil']);
@@ -114,7 +96,6 @@ function gravarNaPlanilha(d, id) {
     (d.marketing === 'sim' ? 'Sim' : 'N\u00e3o'), d.perfil
   ]);
 
-  // Aba "Respostas": 1 linha por pergunta respondida (base p/ \u00edndice de n\u00e3o conformidade)
   var aResp = getOrCreateSheet(ss, 'Respostas',
     ['ID', 'Data', 'Empresa', 'Item', 'Se\u00e7\u00e3o', 'Tipo', 'Conformidade', 'Pergunta']);
   if (d.respostas && d.respostas.length) {
@@ -123,6 +104,9 @@ function gravarNaPlanilha(d, id) {
     });
     aResp.getRange(aResp.getLastRow() + 1, 1, linhas.length, linhas[0].length).setValues(linhas);
   }
+
+  // Recalcula o dashboard (um erro aqui n\u00e3o impede a grava\u00e7\u00e3o dos dados)
+  try { atualizarResumo(ss); } catch (eRes) {}
 }
 
 function getOrCreateSheet(ss, nome, cabecalho) {
@@ -130,10 +114,118 @@ function getOrCreateSheet(ss, nome, cabecalho) {
   if (!sh) {
     sh = ss.insertSheet(nome);
     sh.appendRow(cabecalho);
-    sh.getRange(1, 1, 1, cabecalho.length).setFontWeight('bold');
+    sh.getRange(1, 1, 1, cabecalho.length).setFontWeight('bold').setBackground('#0a2a5e').setFontColor('#ffffff');
     sh.setFrozenRows(1);
   }
   return sh;
+}
+
+/* ============================================================================
+   RESUMO (dashboard) \u2014 agrega\u00e7\u00e3o test\u00e1vel + escrita formatada
+   ============================================================================ */
+function agregarResumo(diag, resp) {
+  var somaScore = 0, nScore = 0, riscoAltoPlus = 0;
+  diag.forEach(function (r) {
+    var sc = Number(r[6]); if (!isNaN(sc)) { somaScore += sc; nScore++; }
+    var cl = String(r[7] || ''); if (/alt[\u00edi]ssimo|alto/i.test(cl)) riscoAltoPlus++;
+  });
+  var scoreMedio = nScore ? Math.round(somaScore / nScore) : 0;
+
+  var itens = {}, secoes = {};
+  resp.forEach(function (r) {
+    var item = r[3], sec = r[4], conf = String(r[6] || ''), perg = r[7];
+    if (conf === '') return;
+    if (!itens[item]) itens[item] = { item: item, secao: sec, pergunta: perg, total: 0, conf: 0, parc: 0, nc: 0 };
+    var oi = itens[item]; oi.secao = sec; oi.pergunta = perg;
+    if (!secoes[sec]) secoes[sec] = { secao: sec, total: 0, conf: 0, parc: 0, nc: 0 };
+    var os = secoes[sec];
+    if (conf !== 'N/A') {
+      oi.total++; os.total++;
+      if (conf === 'Conforme') { oi.conf++; os.conf++; }
+      else if (conf === 'Parcial') { oi.parc++; os.parc++; }
+      else { oi.nc++; os.nc++; }
+    }
+  });
+  function pct(n, d) { return d ? n / d : 0; }
+  var porItem = Object.keys(itens).map(function (k) {
+    var o = itens[k];
+    return { item: o.item, secao: o.secao, pergunta: o.pergunta, total: o.total, nc: o.nc, parc: o.parc,
+             pctNC: pct(o.nc, o.total), pctRess: pct(o.nc + o.parc, o.total) };
+  });
+  var porSecao = Object.keys(secoes).map(function (k) {
+    var o = secoes[k];
+    return { secao: o.secao, total: o.total, nc: o.nc, parc: o.parc,
+             pctNC: pct(o.nc, o.total), pctRess: pct(o.nc + o.parc, o.total) };
+  });
+  porItem.sort(function (a, b) { return b.pctRess - a.pctRess || b.total - a.total; });
+  porSecao.sort(function (a, b) { return b.pctRess - a.pctRess; });
+  return { totalDiag: diag.length, scoreMedio: scoreMedio, riscoAltoPlus: riscoAltoPlus, porItem: porItem, porSecao: porSecao };
+}
+
+function atualizarResumo(ss) {
+  ss = ss || SpreadsheetApp.openById(SHEET_ID);
+  var shD = ss.getSheetByName('Diagnosticos');
+  var shR = ss.getSheetByName('Respostas');
+  var diag = (shD && shD.getLastRow() > 1) ? shD.getRange(2, 1, shD.getLastRow() - 1, 11).getValues() : [];
+  var resp = (shR && shR.getLastRow() > 1) ? shR.getRange(2, 1, shR.getLastRow() - 1, 8).getValues() : [];
+  var ag = agregarResumo(diag, resp);
+
+  var sh = ss.getSheetByName('Resumo');
+  if (!sh) sh = ss.insertSheet('Resumo');
+  sh.clear();
+  sh.clearConditionalFormatRules();
+  sh.getRange(1, 1, sh.getMaxRows(), Math.max(sh.getMaxColumns(), 6)).breakApart();
+
+  var NAVY = '#041F47', HEADBG = '#0a2a5e', MUTED = '#6b7280';
+  sh.setColumnWidth(1, 90); sh.setColumnWidth(2, 250); sh.setColumnWidth(3, 380);
+  sh.setColumnWidth(4, 95); sh.setColumnWidth(5, 120); sh.setColumnWidth(6, 120);
+
+  var r = 1;
+  sh.getRange(r, 1, 1, 6).merge().setValue('Resumo \u2014 Autodiagn\u00f3stico Regulat\u00f3rio BPF')
+    .setBackground(NAVY).setFontColor('#ffffff').setFontSize(14).setFontWeight('bold').setVerticalAlignment('middle');
+  sh.setRowHeight(r, 34); r++;
+  sh.getRange(r, 1, 1, 6).merge().setValue('Atualizado automaticamente a cada novo preenchimento. Use dados agregados/an\u00f4nimos ao apresentar.')
+    .setFontColor(MUTED).setFontSize(10); r += 2;
+
+  var labels = ['Diagn\u00f3sticos', 'Score m\u00e9dio', 'Com Risco Alto/Alt\u00edssimo'];
+  var valores = [ag.totalDiag, ag.scoreMedio, ag.riscoAltoPlus];
+  for (var c = 0; c < 3; c++) {
+    var col = 1 + c * 2;
+    sh.getRange(r, col, 1, 2).merge().setValue(labels[c]).setFontColor(MUTED).setFontSize(10).setFontWeight('bold');
+    sh.getRange(r + 1, col, 1, 2).merge().setValue(valores[c]).setFontColor(NAVY).setFontSize(22).setFontWeight('bold');
+  }
+  r += 3;
+
+  r = escreverSecaoResumo(sh, r, 'N\u00e3o conformidade por \u00e1rea',
+    ['Se\u00e7\u00e3o', 'Respostas', '% N\u00e3o conforme', '% Com ressalva'],
+    ag.porSecao.map(function (s) { return [s.secao, s.total, s.pctNC, s.pctRess]; }), [3, 4], HEADBG);
+  r += 1;
+
+  escreverSecaoResumo(sh, r, 'Itens que mais reprovam (ranking)',
+    ['Item', 'Se\u00e7\u00e3o', 'Pergunta', 'Respostas', '% N\u00e3o conforme', '% Com ressalva'],
+    ag.porItem.map(function (i) { return [i.item, i.secao, i.pergunta, i.total, i.pctNC, i.pctRess]; }), [5, 6], HEADBG);
+
+  ss.setActiveSheet(sh); ss.moveActiveSheet(1);
+}
+
+function escreverSecaoResumo(sh, r, titulo, cab, linhas, pctCols, HEADBG) {
+  var n = cab.length;
+  sh.getRange(r, 1, 1, n).merge().setValue(titulo).setFontColor('#041F47').setFontSize(13).setFontWeight('bold'); r++;
+  sh.getRange(r, 1, 1, n).setValues([cab]).setBackground(HEADBG).setFontColor('#ffffff').setFontWeight('bold').setFontSize(11); r++;
+  if (linhas.length) {
+    sh.getRange(r, 1, linhas.length, n).setValues(linhas);
+    pctCols.forEach(function (pc) { sh.getRange(r, pc, linhas.length, 1).setNumberFormat('0%'); });
+    var col = pctCols[pctCols.length - 1];
+    var rng = sh.getRange(r, col, linhas.length, 1);
+    var rule = SpreadsheetApp.newConditionalFormatRule()
+      .setGradientMinpointWithValue('#10b981', SpreadsheetApp.InterpolationPointType.NUMBER, '0')
+      .setGradientMidpointWithValue('#f59e0b', SpreadsheetApp.InterpolationPointType.NUMBER, '0.5')
+      .setGradientMaxpointWithValue('#ef4444', SpreadsheetApp.InterpolationPointType.NUMBER, '1')
+      .setRanges([rng]).build();
+    var rules = sh.getConditionalFormatRules(); rules.push(rule); sh.setConditionalFormatRules(rules);
+    r += linhas.length;
+  }
+  return r;
 }
 
 /* ---------- Cores ---------- */
@@ -152,7 +244,6 @@ function corBarra(pct) {
 }
 
 /* ---------- Relat\u00f3rio (vai NO CORPO do e-mail) ---------- */
-// Retorna um fragmento HTML (sem <html>/<body>) que os clientes de e-mail renderizam bem.
 function montarRelatorioHtml(d) {
   var linhasSecoes = d.secoes.map(function (s) {
     var cor = corBarra(Number(s.pct));
@@ -193,30 +284,25 @@ function montarRelatorioHtml(d) {
           '<td><b>Empresa:</b> ' + esc(d.empresa) + '<br><b>Respons\u00e1vel:</b> ' + esc(d.nome) + '</td>' +
           '<td style="text-align:right;"><b>Registro MAPA:</b> ' + esc(d.registro || '\u2014') + '<br><b>Data:</b> ' + esc(d.data) + '</td>' +
         '</tr></table>' +
-
         '<div style="background:' + COR.navy + ';border-radius:10px;padding:18px;text-align:center;color:#fff;margin-bottom:20px;">' +
           '<div style="font-size:11px;letter-spacing:1.5px;opacity:.85;text-transform:uppercase;">Score de Conformidade BPF/Autocontroles</div>' +
           '<div style="font-size:44px;font-weight:bold;line-height:1.1;">' + esc(d.score) + '</div>' +
           '<div style="display:inline-block;margin-top:6px;padding:5px 16px;border-radius:16px;background:' + corClassificacao(d.classificacao) + ';color:#fff;font-weight:bold;font-size:13px;">' + esc(d.classificacao) + '</div>' +
         '</div>' +
-
         '<h3 style="color:' + COR.navy + ';font-size:15px;margin:0 0 8px;">Desempenho por \u00e1rea</h3>' +
         '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;">' + linhasSecoes + '</table>' +
-
         '<h3 style="color:' + COR.navy + ';font-size:15px;margin:0 0 8px;">Riscos regulat\u00f3rios identificados</h3>' +
         '<div style="background:#fff7ed;border-left:4px solid ' + COR.dourado + ';border-radius:8px;padding:14px;">' + blocoRiscos + '</div>' +
       '</div>' +
     '</div>';
 
   return '<div style="max-width:640px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;">' +
-    cartao +
-    montarRodapeHtml() +
+    cartao + montarRodapeHtml() +
     '<p style="font-size:10px;color:' + COR.cinza + ';margin:16px 6px 0;line-height:1.5;text-align:center;">Esta \u00e9 uma autoavalia\u00e7\u00e3o indicativa, preenchida pelo pr\u00f3prio estabelecimento. O c\u00e1lculo oficial do Risco Regulat\u00f3rio \u00e9 realizado pelo servi\u00e7o de inspe\u00e7\u00e3o competente. Baseado no Termo de Fiscaliza\u00e7\u00e3o do MAPA (TF-BPF/Autocontroles e M\u00f3dulo II de Medicamentos).</p>' +
     '<p style="font-size:11px;color:#9ca3af;margin:10px 6px 0;line-height:1.5;text-align:center;">Voc\u00ea est\u00e1 recebendo este e-mail porque preencheu o Autodiagn\u00f3stico Regulat\u00f3rio BPF no site da Dal Cero Consultoria.</p>' +
   '</div>';
 }
 
-// Rodap\u00e9 no estilo da calculadora: painel azul com grade de contatos e barra de endere\u00e7o
 function montarRodapeHtml() {
   return '' +
   '<div style="background-color:' + COR.navy + ';background:linear-gradient(135deg,' + COR.navy + ' 0%,#003B91 60%,' + COR.azul + ' 100%);color:#fff;border-radius:14px;padding:28px 24px;margin-top:20px;">' +
@@ -251,7 +337,7 @@ function cardContato(label, valor) {
   '</div>';
 }
 
-/* ---------- Corpos dos e-mails (relat\u00f3rio no corpo) ---------- */
+/* ---------- Corpos dos e-mails ---------- */
 function corpoEmailLead(d) {
   var primeiro = (d.nome || '').split(' ')[0] || 'Ol\u00e1';
   return '<div style="font-family:Arial,sans-serif;color:#1f2937;font-size:14px;line-height:1.6;">' +
@@ -290,7 +376,7 @@ function formatarData(iso) {
   } catch (e) { return ''; }
 }
 
-/* ---------- Teste manual (rode uma vez para autorizar e validar) ---------- */
+/* ---------- Teste manual ---------- */
 function testarEnvio() {
   doPost({ parameter: {
     nome: 'Teste Dal Cero', empresa: 'F\u00e1brica Exemplo', email: Session.getActiveUser().getEmail(),
